@@ -98,7 +98,7 @@ export default function AgentConsolePage() {
             setMessages([{
                 id: 'no-dataset',
                 role: 'agent',
-                content: "Please upload and select a dataset in the Data Hub before starting a chat."
+                content: "Please upload and select a dataset in Datasets before starting a chat."
             }]);
         } else {
             setMessages(defaultMockupMessages);
@@ -143,7 +143,7 @@ export default function AgentConsolePage() {
 
     const suggestedPrompts = [
         "Summarize today's findings.",
-        "Explain why XGBoost was selected.",
+        "Explain how the model was chosen.",
         "Suggest improvements.",
         "Create an executive report.",
         "Predict next month's sales."
@@ -168,7 +168,7 @@ export default function AgentConsolePage() {
                 </div>
                 <div className="flex gap-2">
                     <button 
-                        onClick={() => setMessages(!selectedDataset ? [{ id: 'no-dataset', role: 'agent', content: "Please upload and select a dataset in the Data Hub before starting a chat." }] : defaultMockupMessages)}
+                        onClick={() => setMessages(!selectedDataset ? [{ id: 'no-dataset', role: 'agent', content: "Please upload and select a dataset in Datasets before starting a chat." }] : defaultMockupMessages)}
                         className="px-3 py-1.5 rounded-lg border border-border text-sm font-medium text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-colors flex items-center gap-2 bg-white"
                     >
                         <Trash2 size={14} /> Clear

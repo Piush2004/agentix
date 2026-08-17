@@ -3,6 +3,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Network, Loader2, UploadCloud, Database, Cpu, TrendingUp, FlaskConical, Sparkles } from 'lucide-react';
 import { usePlatformStore } from '@/store/platformStore';
+import { useAiPersona } from '@/hooks/useAiPersona';
 import Link from 'next/link';
 import {
   ReactFlow,
@@ -16,10 +17,9 @@ import {
 import '@xyflow/react/dist/style.css';
 
 export default function KnowledgeGraphPage() {
+  const { isExecutive } = useAiPersona();
   const datasetName = usePlatformStore(state => state.datasetName);
   const fetchHistory = usePlatformStore(state => state.fetchHistory);
-  const automlData = usePlatformStore(state => state.automlData);
-  const profileData = usePlatformStore(state => state.profileData);
   const fetchAutoML = usePlatformStore(state => state.fetchAutoML);
   const fetchProfile = usePlatformStore(state => state.fetchProfile);
   const [nodes, setNodes] = useState<Node[]>([]);
@@ -35,6 +35,10 @@ export default function KnowledgeGraphPage() {
       await fetchProfile();
       try { await fetchAutoML(); } catch { /* ok if no model trained yet */ }
     }
+
+    const state = usePlatformStore.getState();
+    const currentProfile = state.profileData;
+    const currentAutoML = state.automlData;
 
     const graphNodes: Node[] = [];
     const graphEdges: Edge[] = [];
@@ -59,28 +63,28 @@ export default function KnowledgeGraphPage() {
     }
 
     // Profile stats node
-    if (profileData) {
+    if (currentProfile) {
       graphNodes.push({
         id: 'profile',
         position: { x: 100, y: 200 },
-        data: { label: `📋 Profile\n${profileData.rows?.toLocaleString()} rows × ${profileData.cols} cols` },
+        data: { label: `📋 Profile\n${currentProfile.rows?.toLocaleString()} rows × ${currentProfile.cols} cols` },
         style: { background: '#f0fdf4', border: '2px solid #86efac', padding: '12px 18px', borderRadius: '12px', fontSize: '12px', fontWeight: 600, whiteSpace: 'pre-line' as any }
       });
       graphEdges.push({ id: 'e-ds-profile', source: 'dataset', target: 'profile', animated: true, style: { stroke: '#86efac' }, markerEnd: { type: MarkerType.ArrowClosed } });
     }
 
     // AutoML nodes
-    if (automlData) {
+    if (currentAutoML) {
       graphNodes.push({
         id: 'automl',
         position: { x: 700, y: 200 },
-        data: { label: `🤖 ${automlData.problem_type || 'ML'}\nTarget: ${automlData.target || 'auto'}` },
+        data: { label: `🤖 ${currentAutoML.problem_type || 'ML'}\nTarget: ${currentAutoML.target || 'auto'}` },
         style: { background: '#fef3c7', border: '2px solid #fbbf24', padding: '12px 18px', borderRadius: '12px', fontSize: '12px', fontWeight: 600, whiteSpace: 'pre-line' as any }
       });
       graphEdges.push({ id: 'e-ds-automl', source: 'dataset', target: 'automl', animated: true, style: { stroke: '#fbbf24' }, markerEnd: { type: MarkerType.ArrowClosed } });
 
       // Leaderboard models
-      (automlData.leaderboard || []).slice(0, 4).forEach((model: any, i: number) => {
+      (currentAutoML.leaderboard || []).slice(0, 4).forEach((model: any, i: number) => {
         const nodeId = `model-${i}`;
         graphNodes.push({
           id: nodeId,
@@ -111,26 +115,29 @@ export default function KnowledgeGraphPage() {
       }
     });
 
-    // Decision Intelligence node
-    graphNodes.push({
-      id: 'decision-intel',
-      position: { x: 350, y: 550 },
-      data: { label: '✨ Decision Intelligence\nMeta-Learning Engine' },
-      style: { 
-        background: 'linear-gradient(135deg, #f0abfc, #c084fc)', 
-        color: 'white', 
-        padding: '14px 20px', borderRadius: '14px', fontSize: '12px', fontWeight: 700, 
-        border: 'none', boxShadow: '0 4px 16px rgba(192,132,252,0.3)', whiteSpace: 'pre-line' as any
+    // Decision Intelligence node — only meaningful once there's something to learn from,
+    // otherwise it rendered as a single disconnected node on empty accounts.
+    if (datasetName || runs.length > 0) {
+      graphNodes.push({
+        id: 'decision-intel',
+        position: { x: 350, y: 550 },
+        data: { label: isExecutive ? '✨ Smart Recommendations\nGets better with every analysis' : '✨ Decision Intelligence\nMeta-Learning Engine' },
+        style: {
+          background: 'linear-gradient(135deg, #f0abfc, #c084fc)',
+          color: 'white',
+          padding: '14px 20px', borderRadius: '14px', fontSize: '12px', fontWeight: 700,
+          border: 'none', boxShadow: '0 4px 16px rgba(192,132,252,0.3)', whiteSpace: 'pre-line' as any
+        }
+      });
+      if (datasetName) {
+        graphEdges.push({ id: 'e-ds-di', source: 'dataset', target: 'decision-intel', animated: true, style: { stroke: '#c084fc' }, markerEnd: { type: MarkerType.ArrowClosed } });
       }
-    });
-    if (datasetName) {
-      graphEdges.push({ id: 'e-ds-di', source: 'dataset', target: 'decision-intel', animated: true, style: { stroke: '#c084fc' }, markerEnd: { type: MarkerType.ArrowClosed } });
     }
 
     setNodes(graphNodes);
     setEdges(graphEdges);
     setIsLoading(false);
-  }, [datasetName, fetchHistory, fetchProfile, fetchAutoML, profileData, automlData]);
+  }, [datasetName, fetchHistory, fetchProfile, fetchAutoML]);
 
   useEffect(() => {
     buildGraph();

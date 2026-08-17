@@ -17,14 +17,15 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePlatformStore } from '@/store/platformStore';
+import { getTerm } from '@/lib/terminology';
 
 const SECTIONS = [
   { id: 'overview', title: 'Overview', icon: Database, color: 'text-primary' },
-  { id: 'cleaning', title: 'Data Cleaning', icon: Wand2, color: 'text-accent' },
-  { id: 'eda', title: 'Exploratory Data Analysis', icon: BarChart2, color: 'text-primary' },
-  { id: 'modeling', title: 'Model Training', icon: BrainCircuit, color: 'text-accent' },
+  { id: 'cleaning', title: getTerm('Cleaning'), icon: Wand2, color: 'text-accent' },
+  { id: 'eda', title: getTerm('Exploratory Data Analysis'), icon: BarChart2, color: 'text-primary' },
+  { id: 'modeling', title: getTerm('Model Planning'), icon: BrainCircuit, color: 'text-accent' },
   { id: 'evaluation', title: 'Evaluation', icon: Target, color: 'text-primary' },
-  { id: 'explainability', title: 'Explainability', icon: SearchCode, color: 'text-accent' },
+  { id: 'explainability', title: getTerm('Explainability'), icon: SearchCode, color: 'text-accent' },
   { id: 'insights', title: 'Business Insights', icon: Lightbulb, color: 'text-warning' },
   { id: 'recommendations', title: 'Recommendations', icon: CheckCircle2, color: 'text-success' },
 ];
@@ -74,7 +75,7 @@ export default function AnalysisPage() {
           Please upload or select a dataset first to view its insights and analysis.
         </p>
         <Link href="/data-dock" className="mt-4 bg-primary text-white px-6 py-2 rounded-xl font-medium hover:bg-primary/90 transition-colors">
-          Go to Data Dock
+          Go to Datasets
         </Link>
       </div>
     );

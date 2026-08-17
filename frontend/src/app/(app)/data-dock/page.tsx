@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { usePlatformStore } from '@/store/platformStore';
 import { useRouter } from 'next/navigation';
+import { getTerm } from '@/lib/terminology';
 
 const STAGE_ICONS: Record<string, string> = {
   'Profiling': '\ud83d\udcca',
@@ -56,6 +57,10 @@ export default function DatasetsPage() {
   useEffect(() => {
     if (!jobStatus) return;
     if (jobStatus.status === 'completed') {
+      if (phase === 'idle') {
+        clearJob();
+        return;
+      }
       setPhase('completed');
       if (pollingRef.current) {
         clearInterval(pollingRef.current);
@@ -67,6 +72,10 @@ export default function DatasetsPage() {
       return () => clearTimeout(timer);
     }
     if (jobStatus.status === 'failed') {
+      if (phase === 'idle') {
+        clearJob();
+        return;
+      }
       setPhase('error');
       setUploadError(jobStatus.error || 'Pipeline processing failed.');
       if (pollingRef.current) {
@@ -74,7 +83,7 @@ export default function DatasetsPage() {
         pollingRef.current = null;
       }
     }
-  }, [jobStatus, router]);
+  }, [jobStatus, router, phase, clearJob]);
 
   const startPolling = useCallback((jobId: string) => {
     if (pollingRef.current) clearInterval(pollingRef.current);
@@ -120,8 +129,15 @@ export default function DatasetsPage() {
     clearJob();
   };
 
+  const onDropRejected = useCallback(() => {
+    setUploadError('Invalid file type. Please upload a CSV, Excel, or JSON file.');
+    setPhase('error');
+    clearJob();
+  }, [clearJob]);
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
+    onDropRejected,
     accept: {
       'text/csv': ['.csv'],
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'],
@@ -224,15 +240,15 @@ export default function DatasetsPage() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.98 }}
-            className="bg-white border border-border rounded-2xl shadow-sm overflow-hidden"
+            className="bg-[#0D1117] border border-border rounded-2xl shadow-sm overflow-hidden font-mono"
           >
-            <div className="p-8 border-b border-border">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-14 h-14 rounded-xl bg-primary-light text-primary flex items-center justify-center shrink-0">
+            <div className="p-8 border-b border-border/20">
+              <div className="flex items-center gap-4 mb-6 text-white">
+                <div className="w-14 h-14 rounded-xl bg-primary/20 text-primary flex items-center justify-center shrink-0">
                   <Cpu size={28} />
                 </div>
                 <div>
-                  <h2 className="text-xl font-bold text-text-primary">Processing {file?.name}</h2>
+                  <h2 className="text-xl font-bold">Processing {file?.name}</h2>
                   <p className="text-text-secondary text-sm flex items-center gap-2 mt-1">
                     <Clock size={14} />
                     {formatETA(estimatedRemaining)}
@@ -241,51 +257,57 @@ export default function DatasetsPage() {
                 <div className="ml-auto text-right">
                   <div className="text-3xl font-bold text-primary">{progress}%</div>
                   <div className="text-xs text-text-tertiary font-medium">
-                    Stage {currentStageIndex + 1} of {jobStatus?.total_stages || 9}
+                    Automated Data Pipeline
                   </div>
                 </div>
               </div>
 
-              <div className="w-full h-3 bg-surface-hover rounded-full overflow-hidden">
-                <motion.div
-                  className="h-full bg-gradient-to-r from-primary to-accent rounded-full"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progress}%` }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                />
+              <div className="w-full flex items-center gap-4 mb-4">
+                <div className="text-primary font-bold text-sm tracking-wider">
+                  {progress < 10 ? `0${progress}` : progress}%
+                </div>
+                <div className="text-primary/30 tracking-[0.2em] font-black text-sm flex-1">
+                  {'█'.repeat(Math.floor(progress / 10))}
+                  <span className="text-[#1F2937]">{'█'.repeat(10 - Math.floor(progress / 10))}</span>
+                </div>
               </div>
             </div>
 
-            <div className="p-6">
-              <div className="space-y-2">
-                {ALL_STAGES.map((stage, idx) => {
-                  const isDone = idx < currentStageIndex;
-                  const isActive = idx === currentStageIndex;
-                  const isPending = idx > currentStageIndex;
-                  const icon = STAGE_ICONS[stage] || '';
+            <div className="p-6 bg-[#090C10] text-sm text-[#8B949E]">
+              <div className="space-y-4">
+                {[
+                  { label: 'File Upload', index: -1 },
+                  { label: 'Schema Detection', index: 0 },
+                  { label: 'Profiling', index: 1 },
+                  { label: 'Cleaning', index: 2 },
+                  { label: 'EDA', index: 3 },
+                  { label: 'Training', index: 6 },
+                ].map((stage) => {
+                  const isDone = stage.index < currentStageIndex;
+                  const isActive = stage.index === currentStageIndex;
+                  const isPending = stage.index > currentStageIndex;
+
+                  let statusText = 'Queued';
+                  let statusColor = 'text-text-tertiary';
+                  
+                  if (stage.index === -1) {
+                     statusText = 'Completed';
+                     statusColor = 'text-success';
+                  } else if (isDone) {
+                    statusText = 'Completed';
+                    statusColor = 'text-success';
+                  } else if (isActive) {
+                    statusText = 'Running';
+                    statusColor = 'text-warning';
+                  }
 
                   return (
-                    <div
-                      key={stage}
-                      className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 ${
-                        isActive
-                          ? 'bg-primary-light/50 border border-primary/20'
-                          : isDone
-                          ? 'bg-surface'
-                          : 'opacity-40'
-                      }`}
-                    >
-                      <span className="text-lg w-8 text-center">{icon}</span>
-                      <span
-                        className={`text-sm font-medium flex-1 ${
-                          isActive ? 'text-primary font-bold' : isDone ? 'text-text-primary' : 'text-text-tertiary'
-                        }`}
-                      >
-                        {stage}
+                    <div key={stage.label} className="flex items-center">
+                      <span className="w-48 font-medium">{stage.label}</span>
+                      <span className={`font-bold ${statusColor}`}>
+                        {isActive && <Loader2 size={12} className="inline mr-2 animate-spin" />}
+                        {statusText}
                       </span>
-                      {isDone && <CheckCircle2 size={16} className="text-success" />}
-                      {isActive && <Loader2 size={16} className="text-primary animate-spin" />}
-                      {isPending && <div className="w-4 h-4 rounded-full border-2 border-border" />}
                     </div>
                   );
                 })}

@@ -51,19 +51,18 @@ def read_users_me(current_user: User = Depends(get_current_user)):
 
 @router.get("/google/login")
 def google_login():
-    # In production, redirect to Google OAuth URL
-    return {"url": "https://accounts.google.com/o/oauth2/auth?... (Mocked for now)"}
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Google OAuth is not configured on this server.",
+    )
 
 @router.get("/google/callback")
 def google_callback(code: str, db: Session = Depends(get_db)):
-    # Mock Google OAuth token exchange
-    email = f"google_user_{code}@example.com"
-    user = db.query(User).filter(User.email == email).first()
-    if not user:
-        user = User(email=email, hashed_password=get_password_hash("oauth_mock_password"), role="user")
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-    
-    access_token = create_access_token(data={"sub": user.id})
-    return {"access_token": access_token, "token_type": "bearer"}
+    # Real Google token exchange (verifying `code` against Google's token endpoint)
+    # is not implemented. Minting a token from a caller-supplied `code` with no
+    # verification would be an authentication bypass, so this route is disabled
+    # until real OAuth verification is wired in.
+    raise HTTPException(
+        status_code=status.HTTP_501_NOT_IMPLEMENTED,
+        detail="Google OAuth is not configured on this server.",
+    )

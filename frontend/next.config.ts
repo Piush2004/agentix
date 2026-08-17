@@ -24,6 +24,20 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async redirects() {
+    return [
+      {
+        source: '/workspace',
+        destination: '/dashboard',
+        permanent: true,
+      },
+      {
+        source: '/onboarding',
+        destination: '/dashboard',
+        permanent: true,
+      }
+    ];
+  },
 };
 
 export default nextConfig;

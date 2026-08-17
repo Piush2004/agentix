@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
   Database,
   Cpu,
@@ -10,15 +10,18 @@ import {
   CheckCircle2,
   Loader2
 } from 'lucide-react';
+import { useAiPersona } from '@/hooks/useAiPersona';
 
 const SETTINGS_TABS = [
   { id: 'llm', label: 'LLM Provider', icon: Cpu },
-  { id: 'database', label: 'DB Connections', icon: Database },
+  { id: 'database', label: 'DB Connections', icon: Database, advanced: true },
   { id: 'theme', label: 'Appearance', icon: Palette },
-  { id: 'api', label: 'API Configuration', icon: KeyRound },
+  { id: 'api', label: 'API Configuration', icon: KeyRound, advanced: true },
 ];
 
 export default function SettingsPage() {
+  const { isExecutive } = useAiPersona();
+  const visibleTabs = SETTINGS_TABS.filter(tab => !tab.advanced || !isExecutive);
   const [activeTab, setActiveTab] = useState('llm');
   const [saved, setSaved] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -96,7 +99,7 @@ export default function SettingsPage() {
         {/* Left Nav */}
         <div className="lg:col-span-3">
           <nav className="flex flex-col sticky top-8 gap-1">
-            {SETTINGS_TABS.map(tab => {
+            {visibleTabs.map(tab => {
               const Icon = tab.icon;
               const isActive = activeTab === tab.id;
               return (
@@ -119,16 +122,14 @@ export default function SettingsPage() {
 
         {/* Right Content */}
         <div className="lg:col-span-9">
-          <AnimatePresence mode="wait">
-            <motion.div 
-              key={activeTab}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              transition={{ duration: 0.2 }}
-              className="bg-white border border-border rounded-2xl p-8 shadow-sm"
-            >
-              
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.2 }}
+            className="bg-white border border-border rounded-2xl p-8 shadow-sm"
+          >
+
               {/* LLM Provider Tab */}
               {activeTab === 'llm' && (
                 <div className="space-y-8">
@@ -153,16 +154,22 @@ export default function SettingsPage() {
                     ))}
                   </div>
 
-                  <div className="pt-6 border-t border-border">
-                    <label className="block text-sm font-bold text-text-primary mb-2">API Key Configuration</label>
-                    <input 
-                      type="password" 
-                      value={settings.apiKey}
-                      onChange={(e) => handleChange('apiKey', e.target.value)}
-                      placeholder="sk-proj-xxxxxxxxxxxxxxxxxxxxxxxx"
-                      className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-[15px] text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm" 
-                    />
-                  </div>
+                  {isExecutive ? (
+                    <div className="pt-6 border-t border-border">
+                      <p className="text-sm text-text-secondary">Your AI provider is already set up and billed through your organization — nothing to configure here.</p>
+                    </div>
+                  ) : (
+                    <div className="pt-6 border-t border-border">
+                      <label className="block text-sm font-bold text-text-primary mb-2">API Key Configuration</label>
+                      <input
+                        type="password"
+                        value={settings.apiKey}
+                        onChange={(e) => handleChange('apiKey', e.target.value)}
+                        placeholder="sk-proj-xxxxxxxxxxxxxxxxxxxxxxxx"
+                        className="w-full bg-surface border border-border rounded-xl px-4 py-3 text-[15px] text-text-primary focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all shadow-sm"
+                      />
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -276,8 +283,7 @@ export default function SettingsPage() {
                 </div>
               )}
 
-            </motion.div>
-          </AnimatePresence>
+          </motion.div>
         </div>
       </div>
     </div>

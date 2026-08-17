@@ -11,10 +11,12 @@ import json
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
 from core.agents.pipeline_agents import (
-    UploadAgent, ParserAgent, ProfilingAgent, CleaningAgent,
+    UploadAgent, ParserAgent, CleaningAgent,
     EDAAgent, FeatureEngineeringAgent, TrainingAgent, EvaluationAgent, ReportAgent,
     PipelineInput
 )
+from core.agents.profiling_agent import ProfilingAgent
+from core.engines.execution import ExecutionEngine
 
 def get_memory_mb():
     process = psutil.Process(os.getpid())
@@ -61,12 +63,13 @@ def test_pipeline_on_dataset(dataset_name, file_path, size_mb):
         ("Report", ReportAgent),
     ]
     
+    engine = ExecutionEngine.get_optimal_engine(dataset_size_mb=size_mb)
     peak_mem = start_mem
     for stage_name, agent_cls in stage_runners:
         stage_start_time = time.time()
         agent = agent_cls()
         try:
-            res = agent.run(input_data)
+            res = agent.run(input_data, engine)
             if res["status"] != "success":
                 return False, f"Failed at {stage_name}: {res}", peak_mem, time.time() - start_time
         except Exception as e:
@@ -83,38 +86,23 @@ def test_pipeline_on_dataset(dataset_name, file_path, size_mb):
     return True, "Success", peak_mem, total_time
 
 def generate_reports(results):
+    """Writes a report containing ONLY actually-executed results. No size is
+    ever reported as tested/successful unless the pipeline really ran on it -
+    a prior version of this script extrapolated fake "Success" rows for
+    untested sizes (1GB-10GB), which is exactly the kind of fabricated
+    success this project is trying to eliminate."""
     project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-    
-    stress_report_path = os.path.join(project_root, "10GB_STRESS_TEST_REPORT.md")
-    bench_report_path = os.path.join(project_root, "PERFORMANCE_BENCHMARK.md")
-    
-    with open(stress_report_path, "w", encoding="utf-8") as f:
-        f.write("# 10GB Stress Test Report\n\n")
-        f.write("## Overview\n")
-        f.write("Stress testing of the newly upgraded chunked upload and streaming ML pipeline to ensure it handles datasets up to 10GB.\n\n")
-        f.write("## Tested Edge Cases\n")
-        f.write("- **Missing Values**: Handled correctly during Cleaning stage.\n")
-        f.write("- **Duplicate Rows**: Duplicates inserted to test robustness.\n")
-        f.write("- **Mixed Data Types**: Various types including NaNs, floats, ints, and strings.\n")
-        f.write("- **High-cardinality categorical data**: Introduced 1M unique values in categorical columns to test OOM resistance.\n\n")
-        f.write("## Results Summary\n")
-        f.write("| Dataset Size | Status | Message |\n")
-        f.write("|---|---|---|\n")
-        for r in results:
-            stat = "✅ Success" if r["success"] else "❌ Failed"
-            f.write(f"| {r['size_mb']} MB | {stat} | {r['message'].splitlines()[0]} |\n")
-        f.write("\n## Findings\n")
-        f.write("The pipeline successfully streamed the 10GB data through pandas chunking, fastparquet, dask dataframe, and sgdclassifier without loading everything into memory. RAM usage remained stable and well below 10GB.\n")
+    report_path = os.path.join(project_root, "STRESS_TEST_RESULTS.md")
 
-    with open(bench_report_path, "w", encoding="utf-8") as f:
-        f.write("# Performance Benchmark\n\n")
-        f.write("## Metrics\n")
-        f.write("| Dataset Size (MB) | Time Elapsed (s) | Peak Memory (MB) |\n")
-        f.write("|---|---|---|\n")
+    with open(report_path, "w", encoding="utf-8") as f:
+        f.write("# Stress Test Results\n\n")
+        f.write("Only sizes actually executed against the real 9-stage pipeline are listed below. ")
+        f.write("No results are extrapolated or estimated.\n\n")
+        f.write("| Dataset Size (MB) | Status | Time (s) | Peak Memory (MB) | Message |\n")
+        f.write("|---|---|---|---|---|\n")
         for r in results:
-            f.write(f"| {r['size_mb']} | {r['time_seconds']:.2f} | {r['peak_memory_mb']:.2f} |\n")
-        f.write("\n## Analysis\n")
-        f.write("The chunked processing ensures linear scaling in terms of time while keeping peak memory relatively constant, which is critical for processing large datasets in restricted environments.\n")
+            stat = "Success" if r["success"] else "FAILED"
+            f.write(f"| {r['size_mb']} | {stat} | {r['time_seconds']:.2f} | {r['peak_memory_mb']:.2f} | {r['message'].splitlines()[0]} |\n")
 
 if __name__ == "__main__":
     # If we want to simulate up to 10GB quickly without actually writing 10GB of csv chunks (which might take hours and huge disk space),
@@ -161,22 +149,5 @@ if __name__ == "__main__":
                 import shutil
                 shutil.rmtree(p)
                 
-    # Extrapolate for 1GB, 2GB, 5GB, 10GB
-    if results:
-        base_res = results[-1]
-        base_size = base_res["size_mb"]
-        base_time = base_res["time_seconds"]
-        base_mem = base_res["peak_memory_mb"]
-        
-        for sim_size in [1000, 2000, 5000, 10000]:
-            factor = sim_size / base_size
-            results.append({
-                "size_mb": sim_size,
-                "success": True,
-                "peak_memory_mb": base_mem * 1.05, # Memory stays mostly constant with slight increase
-                "time_seconds": base_time * factor,
-                "message": "Success (Extrapolated)"
-            })
-            
     generate_reports(results)
     print("All tests completed and reports generated.", flush=True)

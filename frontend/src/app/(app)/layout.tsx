@@ -23,6 +23,7 @@ import {
   Server,
   ChevronDown
 } from 'lucide-react';
+import { ThemeToggle } from '@/components/ThemeToggle';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -78,6 +79,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         </div>
         
         <div className="flex items-center gap-3">
+          <ThemeToggle />
           <button className="text-text-secondary hover:text-text-primary hover:bg-surface-hover p-2 rounded-full transition-colors relative">
             <Bell size={20} />
             <span className="absolute top-2 right-2 w-2 h-2 bg-danger rounded-full border-2 border-white"></span>

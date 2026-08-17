@@ -1,5 +1,6 @@
 import React from 'react';
 import { signIn } from '@/auth';
+import { googleConfigured } from '@/auth.config';
 import { Sparkles, ArrowRight, AlertCircle } from 'lucide-react';
 import Link from 'next/link';
 
@@ -27,6 +28,13 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
 
   const handleGoogleLogin = async () => {
     "use server";
+    if (!googleConfigured) {
+      // No Google OAuth provider is configured (needs a real Client ID/Secret
+      // from Google Cloud Console) — attempting signIn("google", ...) here would
+      // throw an unhandled error instead of taking the user anywhere.
+      const { redirect } = await import("next/navigation");
+      redirect("/login?error=GoogleNotConfigured");
+    }
     await signIn("google", { redirectTo: "/dashboard" });
   };
 
@@ -86,6 +94,13 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
                 Continue with Google
               </button>
             </form>
+
+            {error === "GoogleNotConfigured" && (
+              <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-lg text-sm font-medium flex items-center gap-2">
+                <AlertCircle size={16} />
+                Google sign-in isn&apos;t set up yet — please sign in with email below.
+              </div>
+            )}
 
             <div className="flex items-center w-full gap-4">
               <div className="h-px bg-slate-200 flex-1"></div>

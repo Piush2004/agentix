@@ -1,6 +1,7 @@
 from typing import Any, Dict, List, Optional
 from pydantic import BaseModel
 from core.agents.base import BaseAgent
+from core.engines.base import ProcessingEngine
 import pandas as pd
 import numpy as np
 
@@ -19,45 +20,44 @@ class ProfilingOutput(BaseModel):
     full_profile: Dict[str, Any]
 
 class ProfilingAgent(BaseAgent[ProfilingInput, ProfilingOutput]):
-    def validate_input(self, data: Any) -> ProfilingInput:
+    def validate(self, data: Any) -> ProfilingInput:
         if isinstance(data, dict):
             return ProfilingInput(**data)
         elif isinstance(data, ProfilingInput):
             return data
         raise ValueError("Invalid input format for ProfilingAgent")
 
-    def execute(self, validated_data: ProfilingInput) -> ProfilingOutput:
+    def execute(self, validated_data: ProfilingInput, engine: ProcessingEngine) -> ProfilingOutput:
         from core.services.data_service import data_service
         from core.context import current_user_id
         
         current_user_id.set(validated_data.user_id)
         
-        # In V2, we might pass file_path directly from UploadAgent in the pipeline state
-        # But for backward compatibility with standalone calls, we use data_service.
         if validated_data.file_path:
-            df = data_service.load_df_from_disk(validated_data.file_path)
+            df = engine.load_dataset(validated_data.file_path)
         else:
-            df = data_service.get_dataset(validated_data.dataset_name)
+            dataset_info = data_service.get_dataset(validated_data.dataset_name)
+            if not dataset_info or "parquet_path" not in dataset_info:
+                raise ValueError(f"Dataset {validated_data.dataset_name} not found or parquet path missing")
+            df = engine.load_dataset(dataset_info["parquet_path"])
             
         if df is None:
             raise ValueError(f"Dataset {validated_data.dataset_name} not found")
             
-        # Simplified memory-efficient profiling
-        # Full EDA Agent handles deep correlations
+        df = engine.compute(df)
+            
         missing = int(df.isna().sum().sum())
         duplicates = int(df.duplicated().sum())
         rows, cols = df.shape
         
-        # Schema detection
         schema_dict = {col: str(dtype) for col, dtype in df.dtypes.items()}
         
-        # Basic profile payload
         profile = {
             "dataset_name": validated_data.dataset_name,
             "metadata_summary": {
                 "Rows": rows,
                 "Columns": cols,
-                "Memory usage": int(df.memory_usage(deep=True).sum()),
+                "Memory usage": engine.get_memory_usage(df),
                 "Column names": list(df.columns),
                 "Data types": schema_dict,
                 "Null count": {col: int(val) for col, val in df.isna().sum().items()},
@@ -72,7 +72,13 @@ class ProfilingAgent(BaseAgent[ProfilingInput, ProfilingOutput]):
             cols=cols,
             missing=missing,
             duplicates=duplicates,
-            outliers=0, # Deeper analysis deferred to EDAAgent
+            outliers=0,
             data_schema=schema_dict,
             full_profile=profile
         )
+
+    def cleanup(self) -> None:
+        pass
+        
+    def rollback(self) -> None:
+        pass

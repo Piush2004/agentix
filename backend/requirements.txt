@@ -29,3 +29,5 @@ fakeredis
 xgboost
 lightgbm
 catboost
+fastparquet
+dask[dataframe]

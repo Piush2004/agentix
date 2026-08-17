@@ -1,8 +1,17 @@
 import type { NextAuthConfig } from 'next-auth';
 import CredentialsProvider from "next-auth/providers/credentials";
+import GoogleProvider from "next-auth/providers/google";
+
+export const googleConfigured = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 
 export const authConfig = {
   providers: [
+    ...(googleConfigured
+      ? [GoogleProvider({
+          clientId: process.env.GOOGLE_CLIENT_ID!,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET!,
+        })]
+      : []),
     CredentialsProvider({
       name: "Credentials",
       credentials: {
@@ -30,7 +39,11 @@ export const authConfig = {
   pages: { 
     signIn: "/login",
   },
-  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET || "super-secret-audit-key",
+  // No hardcoded fallback: a known secret string committed in source would
+  // let anyone forge a valid session JWT against any deployment that forgot
+  // to override it. AUTH_SECRET must be set (frontend/.env for local dev -
+  // gitignored, generated randomly; a real one in production).
+  secret: process.env.AUTH_SECRET || process.env.NEXTAUTH_SECRET,
   trustHost: true,
   callbacks: {
     async jwt({ token, user }) {

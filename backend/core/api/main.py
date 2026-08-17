@@ -7,21 +7,19 @@ from core.repositories.database import engine, Base
 import structlog
 import logging
 import sys
+import os
 import sentry_sdk
 from prometheus_client import generate_latest, CONTENT_TYPE_LATEST
-from opentelemetry import trace
-from opentelemetry.instrumentation.fastapi import FastAPIInstrumentor
-from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
-from opentelemetry.sdk.trace import TracerProvider
-from opentelemetry.sdk.trace.export import BatchSpanProcessor
-from opentelemetry.sdk.resources import Resource, SERVICE_NAME
 
-# Error Tracking (Sentry)
-sentry_sdk.init(
-    dsn="https://mock_dsn@o0.ingest.sentry.io/0",
-    traces_sample_rate=1.0,
-    profiles_sample_rate=1.0,
-)
+# Error Tracking (Sentry) - only enabled when a real DSN is configured;
+# a fake/placeholder DSN would silently no-op while looking configured.
+_sentry_dsn = os.getenv("SENTRY_DSN")
+if _sentry_dsn:
+    sentry_sdk.init(
+        dsn=_sentry_dsn,
+        traces_sample_rate=1.0,
+        profiles_sample_rate=1.0,
+    )
 
 # Structured Logs
 structlog.configure(
@@ -39,11 +37,7 @@ logger = structlog.get_logger()
 logging.basicConfig(format="%(message)s", stream=sys.stdout, level=logging.INFO)
 
 # OpenTelemetry
-resource = Resource(attributes={SERVICE_NAME: "agentix-backend"})
-trace_provider = TracerProvider(resource=resource)
-otlp_exporter = OTLPSpanExporter(endpoint="http://otel-collector:4317", insecure=True)
-trace_provider.add_span_processor(BatchSpanProcessor(otlp_exporter))
-trace.set_tracer_provider(trace_provider)
+from core.telemetry import setup_telemetry
 
 from core.schemas.api_schemas import BaseResponse
 
@@ -57,7 +51,7 @@ app = FastAPI(
 )
 
 # Instrument FastAPI with OpenTelemetry
-FastAPIInstrumentor.instrument_app(app)
+setup_telemetry(app)
 
 from fastapi.responses import JSONResponse
 from fastapi import Request
@@ -91,9 +85,12 @@ app.add_middleware(EnterpriseProfilerMiddleware, slow_threshold_ms=500.0)
 app.add_middleware(GZipMiddleware, minimum_size=1000)
 app.add_middleware(SecurityMiddleware, rate_limit=200)
 
+allowed_origins_str = os.getenv("ALLOWED_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000,http://localhost:3001,http://127.0.0.1:3001")
+origins = [origin.strip() for origin in allowed_origins_str.split(",")]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # Allow all origins for dev/testing so network IPs work
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["Authorization", "Content-Type", "X-API-Key"],
@@ -110,4 +107,4 @@ def health_check():
         data={"status": "ok", "project": settings.PROJECT_NAME}
     )
 
-# Trigger reload
+# Trigger reload 2

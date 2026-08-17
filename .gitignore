@@ -62,3 +62,5 @@ benchmark_dataset.csv
 data/
 *.csv
 *.db
+*.db-shm
+*.db-wal

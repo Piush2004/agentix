@@ -5,6 +5,8 @@ import logging
 import uuid
 import traceback
 from abc import ABC, abstractmethod
+from core.engines.base import ProcessingEngine
+from core.exceptions import PipelineException
 
 # Configure basic logger for agents
 logger = logging.getLogger("agentix_v2")
@@ -15,22 +17,32 @@ OutputType = TypeVar("OutputType", bound=BaseModel)
 class BaseAgent(ABC, Generic[InputType, OutputType]):
     """
     Base class for all Agentix V2 Execution Agents.
-    Enforces strict typing, validation, error handling, and logging.
+    Enforces strict typing, validation, error handling, and lifecycle.
     """
     def __init__(self):
         self.agent_name = self.__class__.__name__
 
     @abstractmethod
-    def validate_input(self, data: Any) -> InputType:
+    def validate(self, input_data: Any) -> InputType:
         """Validates raw input data against the Input schema."""
         pass
 
     @abstractmethod
-    def execute(self, validated_data: InputType) -> OutputType:
+    def execute(self, validated_data: InputType, engine: ProcessingEngine) -> OutputType:
         """Core execution logic of the agent."""
         pass
 
-    def run(self, data: Any, job_id: str = None) -> Dict[str, Any]:
+    @abstractmethod
+    def cleanup(self) -> None:
+        """Clean up resources after successful execution."""
+        pass
+
+    @abstractmethod
+    def rollback(self) -> None:
+        """Rollback state if execution fails."""
+        pass
+
+    def run(self, data: Any, engine: ProcessingEngine, job_id: str = None) -> Dict[str, Any]:
         """
         Orchestrates the lifecycle of a single agent execution.
         """
@@ -41,60 +53,67 @@ class BaseAgent(ABC, Generic[InputType, OutputType]):
         
         try:
             # 1. Validation
-            validated_input = self.validate_input(data)
+            try:
+                validated_input = self.validate(data)
+            except Exception as e:
+                raise PipelineException(
+                    stage=self.agent_name,
+                    agent=self.agent_name,
+                    dataset=data.get("dataset_name", "Unknown") if isinstance(data, dict) else "Unknown",
+                    root_cause="Validation Error",
+                    stack_trace=traceback.format_exc(),
+                    suggested_fix="Check the input schema requirements.",
+                    message=str(e)
+                )
             
             # 2. Execution
-            output = self.execute(validated_input)
+            try:
+                output = self.execute(validated_input, engine)
+            except Exception as e:
+                raise PipelineException(
+                    stage=self.agent_name,
+                    agent=self.agent_name,
+                    dataset=getattr(validated_input, "dataset_name", "Unknown"),
+                    root_cause=type(e).__name__,
+                    stack_trace=traceback.format_exc(),
+                    suggested_fix="Review the stack trace for the exact point of failure.",
+                    message=str(e)
+                )
+            
+            # 3. Cleanup
+            self.cleanup()
             
             execution_time = time.time() - start_time
             logger.info(f"[{self.agent_name}] Execution successful for Job ID: {job_id} in {execution_time:.2f}s")
             
-            # 3. Output Formatting
+            # 4. Output Formatting
             return {
                 "status": "success",
                 "agent": self.agent_name,
                 "job_id": job_id,
                 "execution_time_sec": execution_time,
-                "data": output.model_dump()
+                "data": output.model_dump() if hasattr(output, 'model_dump') else output
             }
             
-        except ValidationError as ve:
-            # Pydantic validation error handling
-            execution_time = time.time() - start_time
-            logger.error(f"[{self.agent_name}] Validation failed for Job ID: {job_id}")
-            return self._handle_error("validation_error", str(ve), execution_time, job_id)
-            
-        except Exception as e:
-            # General execution error handling
-            execution_time = time.time() - start_time
-            logger.error(f"[{self.agent_name}] Execution failed for Job ID: {job_id}. Error: {str(e)}")
-            return self._handle_error("execution_error", str(e), execution_time, job_id, traceback.format_exc())
+        except PipelineException:
+            # Rollback if an exception occurred
+            try:
+                self.rollback()
+            except Exception as rollback_e:
+                logger.error(f"[{self.agent_name}] Rollback failed: {str(rollback_e)}")
+            raise
+        except Exception as generic_e:
+            try:
+                self.rollback()
+            except Exception:
+                pass
+            raise PipelineException(
+                stage=self.agent_name,
+                agent=self.agent_name,
+                dataset="Unknown",
+                root_cause="Unexpected Error",
+                stack_trace=traceback.format_exc(),
+                suggested_fix="Check backend logs.",
+                message=str(generic_e)
+            )
 
-    def _handle_error(self, error_type: str, message: str, execution_time: float, job_id: str, stack_trace: str = None) -> Dict[str, Any]:
-        """Formats the error response adhering to Phase 7 Error System."""
-        import sys
-        exc_type, exc_obj, exc_tb = sys.exc_info()
-        file_name = exc_tb.tb_frame.f_code.co_filename if exc_tb else "Unknown"
-        line_number = exc_tb.tb_lineno if exc_tb else -1
-        function_name = exc_tb.tb_frame.f_code.co_name if exc_tb else "Unknown"
-        
-        error_payload = {
-            "status": "error",
-            "agent": self.agent_name,
-            "job_id": job_id,
-            "execution_time_sec": execution_time,
-            "error": {
-                "type": error_type,
-                "message": message,
-                "source_agent": self.agent_name,
-                "file": file_name,
-                "function": function_name,
-                "line_number": line_number,
-                "root_cause": message,
-                "suggested_fix": "Check logs and validate inputs. Verify dependencies are running."
-            }
-        }
-        if stack_trace:
-            error_payload["error"]["stack_trace"] = stack_trace
-            
-        return error_payload

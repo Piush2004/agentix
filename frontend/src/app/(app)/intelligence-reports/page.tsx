@@ -13,7 +13,16 @@ import {
   AlertCircle
 } from 'lucide-react';
 import { usePlatformStore } from '@/store/platformStore';
-
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from 'recharts';
 export default function ReportsPage() {
   const { 
     datasetName,
@@ -167,13 +176,46 @@ export default function ReportsPage() {
             </div>
           </div>
 
-          {/* Charts Area Mock */}
+          {/* Charts Area */}
           <div className="mb-12">
             <h2 className="text-xl font-bold text-text-primary mb-4 font-heading border-b border-border pb-3">Performance Distribution</h2>
-            <div className="w-full h-64 bg-surface rounded-xl border border-border border-dashed flex flex-col items-center justify-center text-text-tertiary gap-3 mt-6">
-              <BarChart2 size={32} />
-              <p className="text-sm font-medium">Interactive Chart Component</p>
-            </div>
+            {models.length > 0 ? (
+              <div className="w-full h-80 bg-surface rounded-xl border border-border mt-6 p-4 pt-8">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart
+                    data={models}
+                    margin={{ top: 0, right: 20, left: -20, bottom: 0 }}
+                  >
+                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                    <XAxis 
+                      dataKey="model" 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{fill: '#6B7280', fontSize: 12, fontWeight: 500}} 
+                      dy={10}
+                    />
+                    <YAxis 
+                      axisLine={false} 
+                      tickLine={false} 
+                      tick={{fill: '#6B7280', fontSize: 12}} 
+                      domain={[0, 'dataMax + 0.1']} 
+                    />
+                    <Tooltip 
+                      contentStyle={{ borderRadius: '12px', border: '1px solid #E5E7EB', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', padding: '12px' }}
+                      cursor={{fill: '#F3F4F6'}}
+                    />
+                    <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }}/>
+                    <Bar dataKey="r2_score" name="R2 Score" fill="#0EA5E9" radius={[6, 6, 0, 0]} maxBarSize={60} />
+                    <Bar dataKey="cv_mean" name="Cross-Validation Mean" fill="#8B5CF6" radius={[6, 6, 0, 0]} maxBarSize={60} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            ) : (
+              <div className="w-full h-64 bg-surface rounded-xl border border-border border-dashed flex flex-col items-center justify-center text-text-tertiary gap-3 mt-6">
+                <BarChart2 size={32} />
+                <p className="text-sm font-medium">No chart data available.</p>
+              </div>
+            )}
           </div>
 
           {/* Recommendations */}

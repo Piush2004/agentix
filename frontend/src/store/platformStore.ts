@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import axios from 'axios';
 
 export interface DashboardMetrics {
@@ -12,6 +13,8 @@ export interface DashboardMetrics {
   mlops_status: string;
   workflow_state: string;
 }
+
+export type WorkflowState = 'Idle' | 'Uploading' | 'Processing' | 'Completed' | 'Failed';
 
 export interface ProfileData {
   rows: number;
@@ -101,8 +104,10 @@ interface PlatformState {
   currentJobId: string | null;
   jobStatus: JobStatus | null;
   uploadProgress: number;
+  workflowState: WorkflowState;
 
   setDatasetName: (name: string) => void;
+  setWorkflowState: (state: WorkflowState) => void;
   fetchDashboardMetrics: () => Promise<void>;
   fetchEDA: () => Promise<void>;
   fetchAutoML: () => Promise<void>;
@@ -120,14 +125,14 @@ interface PlatformState {
   fetchHistory: () => Promise<{ runs: any[]; activity: any[] }>;
 }
 
-const backendBase = typeof window !== 'undefined'
-  ? `${window.location.protocol}//${window.location.hostname}:8000`
-  : 'http://localhost:8000';
+const backendBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 const API_BASE = `${backendBase}/api/v1/platform`;
 
-export const usePlatformStore = create<PlatformState>((set, get) => ({
-  datasetName: null,
-  isLoading: false,
+export const usePlatformStore = create<PlatformState>()(
+  persist(
+    (set, get) => ({
+      datasetName: null,
+      isLoading: false,
   error: null,
 
   dashboardMetrics: null,
@@ -142,8 +147,10 @@ export const usePlatformStore = create<PlatformState>((set, get) => ({
   currentJobId: null,
   jobStatus: null,
   uploadProgress: 0,
+  workflowState: 'Idle',
 
   setDatasetName: (name: string) => set({ datasetName: name }),
+  setWorkflowState: (state: WorkflowState) => set({ workflowState: state }),
 
   fetchDashboardMetrics: async () => {
     set({ isLoading: true, error: null });
@@ -233,7 +240,10 @@ export const usePlatformStore = create<PlatformState>((set, get) => ({
   },
 
   uploadDataset: async (file: File) => {
-    set({ isLoading: true, error: null, currentJobId: null, jobStatus: null, uploadProgress: 0 });
+    if (get().workflowState === 'Failed') {
+      // Do not proceed if already failed. User must clear/retry explicitly.
+    }
+    set({ isLoading: true, error: null, currentJobId: null, jobStatus: null, uploadProgress: 0, workflowState: 'Uploading' });
     try {
       const CHUNK_SIZE = 5 * 1024 * 1024; // 5MB chunks
       const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
@@ -299,26 +309,50 @@ export const usePlatformStore = create<PlatformState>((set, get) => ({
         },
         isLoading: false,
       });
+      set({ workflowState: 'Processing' });
       return { job_id, dataset_name };
     } catch (err: any) {
       const errorDetail = err.response?.data?.detail || err.message || String(err);
-      set({ error: typeof errorDetail === 'string' ? errorDetail : JSON.stringify(errorDetail), isLoading: false });
+      set({ error: typeof errorDetail === 'string' ? errorDetail : JSON.stringify(errorDetail), isLoading: false, workflowState: 'Failed' });
       return null;
     }
   },
 
   pollJobStatus: async (jobId: string) => {
+    const currentState = get().workflowState;
+    if (currentState === 'Failed' || currentState === 'Completed') {
+      return get().jobStatus;
+    }
+
     try {
       const res = await axios.get(`${backendBase}/api/v1/jobs/${jobId}`);
       const status: JobStatus = res.data;
       set({ jobStatus: status });
+      if (status.status === 'completed') {
+        set({ workflowState: 'Completed' });
+      } else if (status.status === 'failed') {
+        set({ workflowState: 'Failed' });
+      }
       return status;
-    } catch {
-      return null;
+    } catch (err: any) {
+      const failedStatus: JobStatus = {
+        job_id: jobId,
+        status: 'failed',
+        dataset_name: get().datasetName || '',
+        current_stage: 'Polling',
+        current_stage_index: 0,
+        total_stages: 9,
+        progress: 0,
+        estimated_remaining: 0,
+        error: err.message || 'Connection lost during polling',
+        result: null
+      };
+      set({ jobStatus: failedStatus, workflowState: 'Failed' });
+      return failedStatus;
     }
   },
 
-  clearJob: () => set({ currentJobId: null, jobStatus: null }),
+  clearJob: () => set({ currentJobId: null, jobStatus: null, workflowState: 'Idle', uploadProgress: 0, error: null }),
 
   startWorkflow: async (datasetName: string) => {
     set({ isLoading: true, error: null });
@@ -386,4 +420,16 @@ export const usePlatformStore = create<PlatformState>((set, get) => ({
       return { runs: [], activity: [] };
     }
   },
-}));
+  }),
+  {
+    name: 'agentix-platform-storage', // unique name
+    storage: createJSONStorage(() => sessionStorage), // (optional) by default, 'localStorage' is used
+    partialize: (state) => ({ 
+      datasetName: state.datasetName,
+      dashboardMetrics: state.dashboardMetrics,
+      currentJobId: state.currentJobId,
+      jobStatus: state.jobStatus,
+      workflowState: state.workflowState
+    }),
+  }
+));
