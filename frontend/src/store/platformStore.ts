@@ -36,14 +36,20 @@ export interface AutoMLData {
   problem_type: string;
   target: string;
   best_model: string;
+  // Real shape returned by backend's _leaderboard_from_stages(): a single
+  // trained model's row (score = accuracy for classification, r2 for
+  // regression), plus whatever the real EvaluationAgent computed spread in
+  // (accuracy/f1_score, or mae/rmse/r2) - not a multi-candidate AutoML
+  // search with cross-validation, which this project does not implement.
   leaderboard: {
     model: string;
-    r2_score: number;
-    rmse: number;
-    mae: number;
-    cv_mean: number;
-    cv_std: number;
-    hyperparameters: Record<string, any>;
+    score: number | null;
+    problem_type?: string;
+    accuracy?: number;
+    f1_score?: number;
+    mae?: number;
+    rmse?: number;
+    r2?: number;
     feature_importances?: Record<string, number>;
   }[];
 }
@@ -165,7 +171,7 @@ export const usePlatformStore = create<PlatformState>()(
 
   fetchEDA: async () => {
     const ds = get().datasetName;
-    if (!ds) return set({ error: 'No active dataset', edaData: null });
+    if (!ds) { set({ error: 'No active dataset', edaData: null }); return; }
     set({ isLoading: true, error: null });
     try {
       const res = await axios.get(`${API_BASE}/eda?dataset_name=${ds}`);
@@ -178,7 +184,7 @@ export const usePlatformStore = create<PlatformState>()(
 
   fetchAutoML: async () => {
     const ds = get().datasetName;
-    if (!ds) return set({ error: 'No active dataset', automlData: null });
+    if (!ds) { set({ error: 'No active dataset', automlData: null }); return; }
     set({ isLoading: true, error: null });
     try {
       const res = await axios.post(`${API_BASE}/predict`, { dataset_name: ds });
@@ -191,7 +197,7 @@ export const usePlatformStore = create<PlatformState>()(
 
   fetchXAI: async () => {
     const ds = get().datasetName;
-    if (!ds) return set({ error: 'No active dataset', xaiData: null });
+    if (!ds) { set({ error: 'No active dataset', xaiData: null }); return; }
     set({ isLoading: true, error: null });
     try {
       const res = await axios.get(`${API_BASE}/xai?dataset_name=${ds}`);
@@ -204,7 +210,7 @@ export const usePlatformStore = create<PlatformState>()(
 
   fetchInsights: async () => {
     const ds = get().datasetName;
-    if (!ds) return set({ error: 'No active dataset', insightsData: null });
+    if (!ds) { set({ error: 'No active dataset', insightsData: null }); return; }
     set({ isLoading: true, error: null });
     try {
       const res = await axios.get(`${API_BASE}/insights?dataset_name=${ds}`);
@@ -217,7 +223,7 @@ export const usePlatformStore = create<PlatformState>()(
 
   fetchRecommendations: async () => {
     const ds = get().datasetName;
-    if (!ds) return set({ error: 'No active dataset', recommendationsData: null });
+    if (!ds) { set({ error: 'No active dataset', recommendationsData: null }); return; }
     set({ isLoading: true, error: null });
     try {
       const res = await axios.get(`${API_BASE}/recommendations?dataset_name=${ds}`);
@@ -381,7 +387,7 @@ export const usePlatformStore = create<PlatformState>()(
 
   fetchProfile: async () => {
     const ds = get().datasetName;
-    if (!ds) return set({ error: 'No active dataset', profileData: null });
+    if (!ds) { set({ error: 'No active dataset', profileData: null }); return; }
     set({ isLoading: true, error: null });
     try {
       const res = await axios.post(`${API_BASE}/profile`, { dataset_name: ds });

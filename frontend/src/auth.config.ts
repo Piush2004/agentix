@@ -1,6 +1,7 @@
 import type { NextAuthConfig } from 'next-auth';
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
+import { prisma } from "@/lib/prisma";
 
 export const googleConfigured = Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
 
@@ -19,12 +20,25 @@ export const authConfig = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        // For testing/audit purposes:
+        // Demo credential login. Upserts a real, stable Prisma User row so every
+        // downstream API route can trust session.user.id as a real DB identity
+        // instead of falling back to "whichever user happens to be first".
         if (credentials?.email === "admin@agentix.com" && credentials?.password === "admin") {
+          const user = await prisma.user.upsert({
+            where: { email: "admin@agentix.com" },
+            update: {},
+            create: {
+              id: "default-admin-1",
+              name: "Enterprise Admin",
+              email: "admin@agentix.com",
+              role: "ADMIN",
+            },
+          });
           return {
-            id: "default-admin-1",
-            name: "Enterprise Admin",
-            email: "admin@agentix.com",
+            id: user.id,
+            name: user.name,
+            email: user.email,
+            role: user.role,
             image: "https://api.dicebear.com/7.x/avataaars/svg?seed=admin"
           };
         }
@@ -49,7 +63,8 @@ export const authConfig = {
     async jwt({ token, user }) {
       if (user) {
         token.id = user.id;
-        token.role = "ADMIN";
+        // @ts-expect-error role is set by the credentials authorize() callback above
+        token.role = user.role || "USER";
       }
       return token;
     },

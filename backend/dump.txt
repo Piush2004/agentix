@@ -1,0 +1,119 @@
+================================================================================
+SLIDE 1  layout=TITLE
+  - shape name='Google Shape;80;p14' type=TEXT_BOX (17) L=0.36 T=1.66 W=12.61 H=4.46
+      TEXT: 'SYNTHETIC SILENCE' sizes=[609600] fonts=['Urbanist']
+      TEXT: 'Mapping Information Voids and Research Gaps in Generative AI Systems using TT-WGAN-GP FrameworksPiush Kole (2548421)Thrilok M(2548430)Guided By- Dr. Deepa BG. ' sizes=[266700, 266700, 266700, 266700] fonts=['Urbanist', 'Urbanist', 'Urbanist', 'Urbanist']
+================================================================================
+SLIDE 2  layout=TITLE_AND_BODY
+  - shape name='Google Shape;86;p15' type=PICTURE (13) L=6.91 T=1.79 W=6.12 H=3.93
+      [PICTURE]
+  - shape name='Google Shape;87;p15' type=TEXT_BOX (17) L=0.21 T=0.49 W=9.68 H=6.47
+      TEXT: 'THE "INFORMATION VOID" PROBLEM' sizes=[419100] fonts=['Urbanist']
+      TEXT: 'HALLUCINATION' sizes=[228600] fonts=['Urbanist']
+      TEXT: 'Errors of commission. The model generates confident but false ' sizes=[190500, 190500, 190500] fonts=['Urbanist', 'Urbanist', 'Urbanist']
+      TEXT: 'information where data is thin.' sizes=[190500] fonts=['Urbanist']
+      TEXT: 'SYNTHETIC SILENCE' sizes=[228600] fonts=['Urbanist']
+      TEXT: 'Errors of omission. Systematic blind spots where the model fails ' sizes=[190500, 190500, 190500] fonts=['Urbanist', 'Urbanist', 'Urbanist']
+      TEXT: 'to learn structure entirely.' sizes=[190500] fonts=['Urbanist']
+      TEXT: 'VOID MAPPING' sizes=[228600] fonts=['Urbanist']
+      TEXT: 'The quest to quantify semantic coverage. What is the model nottelling us?' sizes=[190500, 190500, 190500] fonts=['Urbanist', 'Urbanist', 'Urbanist']
+      TEXT: '"Generative models are evaluated on what they produce, not what they fail to produce."' sizes=[190500] fonts=['Urbanist']
+================================================================================
+SLIDE 3  layout=TITLE_AND_BODY
+  - shape name='Google Shape;93;p16' type=TABLE (19) L=0.42 T=1.27 W=3.28 H=3.28
+      [TABLE 5x4]
+         ['Technique', 'Pros', 'Cons', 'Suitability for Voids']
+         ['Standard GAN', 'High fidelity samples', 'Suffers from mode collapse', 'Low']
+         ['VAE', 'Captures distributions', 'Posterior collapse / Blurring', 'Mid']
+         ['Monte Carlo', 'Highly accurate', 'Curse of dimensionality', 'Impossible']
+         ['TT-WGAN-GP', 'Low-rank constraints', 'Complex training dynamics', 'High']
+  - shape name='Google Shape;94;p16' type=TEXT_BOX (17) L=0.48 T=0.50 W=9.63 H=0.56
+      TEXT: 'TECHNIQUE COMPARATIVE ANALYSIS' sizes=[419100] fonts=['Urbanist']
+  - shape name='Google Shape;95;p16' type=TEXT_BOX (17) L=0.73 T=5.60 W=11.44 H=0.30
+      TEXT: 'PROPOSED MIDDLEWARE: Unbiased Generative Guardians' sizes=[228600] fonts=['Urbanist']
+  - shape name='Google Shape;96;p16' type=TEXT_BOX (17) L=0.73 T=6.16 W=11.61 H=0.57
+      TEXT: 'Utilizing Dynamic Knowledge Graphs to audit generative truth in real-time.' sizes=[279400] fonts=['Urbanist']
+================================================================================
+SLIDE 4  layout=TITLE_AND_BODY
+  - shape name='Google Shape;102;p17' type=TEXT_BOX (17) L=0.37 T=0.46 W=11.94 H=0.76
+      TEXT: 'METHODOLOGY: TT-WGAN-GP' sizes=[419100] fonts=['Urbanist']
+  - shape name='Google Shape;103;p17' type=TEXT_BOX (17) L=0.59 T=1.66 W=6.06 H=0.35
+      TEXT: 'COMPRESSION-AS-MAP THEORY' sizes=[267208] fonts=['Urbanist']
+  - shape name='Google Shape;104;p17' type=TEXT_BOX (17) L=0.59 T=2.14 W=11.48 H=1.03
+      TEXT: 'We propose a Tensor-Train Wasserstein GAN with Gradient Penalty to map the "Synthetic Silence."' sizes=[241300] fonts=['Urbanist']
+  - shape name='Google Shape;105;p17' type=TEXT_BOX (17) L=0.59 T=6.00 W=7.50 H=0.49
+      TEXT: 'High Void Score (VS) = Structural Hallucination or Semantic Gap.' sizes=[215900] fonts=['Urbanist']
+  - shape name='Google Shape;106;p17' type=AUTO_SHAPE (1) L=0.81 T=3.54 W=10.85 H=1.50
+  - shape name='Google Shape;107;p17' type=PICTURE (13) L=1.12 T=4.10 W=9.82 H=0.40
+      [PICTURE]
+================================================================================
+SLIDE 5  layout=TITLE_AND_BODY
+  - shape name='Google Shape;113;p18' type=TEXT_BOX (17) L=0.93 T=1.10 W=9.46 H=1.12
+      TEXT: '1. Tensorization: Reshape high-dimensional feature vectors into tensor trains.' sizes=[266700, 266700] fonts=['Urbanist', 'Urbanist']
+  - shape name='Google Shape;114;p18' type=TEXT_BOX (17) L=1.02 T=2.65 W=7.98 H=1.08
+      TEXT: '2. Structural Filter: TT-layers force the model to learn only robust correlations; they cannot memorize noise.' sizes=[254000, 254000, 254000, 254000] fonts=['Urbanist', 'Urbanist', 'Urbanist', 'Urbanist']
+  - shape name='Google Shape;115;p18' type=TEXT_BOX (17) L=1.03 T=4.24 W=9.27 H=1.12
+      TEXT: '3. Discovery: Regions that TT-WGAN-GP fails to generate identify the "Voids."' sizes=[266700, 266700] fonts=['Urbanist', 'Urbanist']
+================================================================================
+SLIDE 6  layout=TITLE_AND_BODY
+  - shape name='Google Shape;121;p19' type=PLACEHOLDER (14) L=12.27 T=7.01 W=0.80 H=0.44
+  - shape name='Google Shape;122;p19' type=PICTURE (13) L=1.03 T=0.30 W=11.02 H=6.71
+      [PICTURE]
+================================================================================
+SLIDE 7  layout=BLANK
+  - shape name='Google Shape;127;p20' type=PICTURE (13) L=0.00 T=0.32 W=13.27 H=6.69
+      [PICTURE]
+================================================================================
+SLIDE 8  layout=BLANK
+  - shape name='Google Shape;133;p21' type=PLACEHOLDER (14) L=12.27 T=7.01 W=0.80 H=0.44
+  - shape name='Google Shape;134;p21' type=AUTO_SHAPE (1) L=0.64 T=2.85 W=12.06 H=0.04
+  - shape name='Google Shape;135;p21' type=AUTO_SHAPE (1) L=1.94 T=3.60 W=0.17 H=0.17
+  - shape name='Google Shape;136;p21' type=TEXT_BOX (17) L=0.57 T=3.06 W=2.91 H=0.25
+      TEXT: 'TRIMESTER 3' sizes=[190500, 190500] fonts=['Urbanist', 'Urbanist']
+  - shape name='Google Shape;137;p21' type=TEXT_BOX (17) L=0.64 T=3.92 W=2.77 H=0.66
+      TEXT: 'Literature review & baseline GAN extraction completed.' sizes=[190500] fonts=['Urbanist']
+  - shape name='Google Shape;138;p21' type=AUTO_SHAPE (1) L=5.04 T=3.60 W=0.17 H=0.17
+  - shape name='Google Shape;139;p21' type=TEXT_BOX (17) L=3.66 T=3.06 W=2.91 H=0.25
+      TEXT: 'NOW (TRANSITION)' sizes=[190500] fonts=['Urbanist']
+  - shape name='Google Shape;140;p21' type=TEXT_BOX (17) L=3.73 T=3.92 W=2.77 H=0.66
+      TEXT: 'Designing TT-Linear layers for manifold mining.' sizes=[190500] fonts=['Urbanist']
+  - shape name='Google Shape;141;p21' type=AUTO_SHAPE (1) L=8.13 T=3.60 W=0.17 H=0.17
+  - shape name='Google Shape;142;p21' type=TEXT_BOX (17) L=6.76 T=3.06 W=2.91 H=0.25
+      TEXT: 'TRIMESTER 4' sizes=[190500, 190500] fonts=['Urbanist', 'Urbanist']
+  - shape name='Google Shape;143;p21' type=TEXT_BOX (17) L=6.83 T=3.85 W=2.77 H=1.06
+      TEXT: 'Building "Unbiased Generative Guardians" middleware.' sizes=[190500, 190500, 190500] fonts=['Urbanist', 'Urbanist', 'Urbanist']
+  - shape name='Google Shape;144;p21' type=AUTO_SHAPE (1) L=11.23 T=3.60 W=0.17 H=0.17
+  - shape name='Google Shape;145;p21' type=TEXT_BOX (17) L=9.85 T=3.06 W=2.91 H=0.25
+      TEXT: 'FINAL STAGE' sizes=[190500] fonts=['Urbanist']
+  - shape name='Google Shape;146;p21' type=TEXT_BOX (17) L=9.92 T=3.85 W=2.77 H=0.66
+      TEXT: 'Validation using real-time SPARQL injection audits.' sizes=[190500] fonts=['Urbanist']
+  - shape name='Google Shape;147;p21' type=TEXT_BOX (17) L=0.84 T=0.64 W=12.45 H=0.56
+      TEXT: 'CURRENT STATUS & FUTURE ROADMAP' sizes=[419100] fonts=['Urbanist']
+  - shape name='Google Shape;148;p21' type=AUTO_SHAPE (1) L=0.64 T=0.64 W=0.06 H=0.55
+================================================================================
+SLIDE 9  layout=BLANK
+  - shape name='Google Shape;154;p22' type=PLACEHOLDER (14) L=12.27 T=7.01 W=0.80 H=0.44
+  - shape name='Google Shape;155;p22' type=TEXT_BOX (17) L=0.25 T=1.41 W=12.93 H=5.82
+      TEXT: 'Probabilistic Nature → Information Omission: LLMs predict likely text, ignoring less probable but important facts → partial answers (Synthetic Silence)' sizes=[190500, 190500] fonts=[None, None]
+      TEXT: 'Knowledge Gaps → Hallucination + Silence: Incomplete training data causes LLMs to either guess (hallucinate) or omit critical information' sizes=[190500, 190500] fonts=[None, None]
+      TEXT: 'Confidence & Alignment Issues: LLMs give confident answers without expressing uncertainty, often hiding missing or filtered information' sizes=[190500, 190500] fonts=[None, None]
+      TEXT: 'Safety Filtering → Over-Sanitization: Alignment policies can suppress useful or sensitive details, leading to incomplete responses' sizes=[190500, 190500] fonts=[None, None]
+      TEXT: 'Future Risk & Solution: LLM failures will stem from missing information, requiring uncertainty estimation, “I don’t know” responses, and explainable AI systems' sizes=[190500, 190500] fonts=[None, None]
+  - shape name='Google Shape;156;p22' type=TEXT_BOX (17) L=0.21 T=0.33 W=12.93 H=0.96
+      TEXT: 'Summary and Future Aspects:- ' sizes=[419100, 419100, 419100] fonts=['Urbanist', 'Urbanist', 'Urbanist']
+================================================================================
+SLIDE 10  layout=BLANK
+  - shape name='Google Shape;162;p23' type=PLACEHOLDER (14) L=12.27 T=7.01 W=0.80 H=0.44
+  - shape name='Google Shape;163;p23' type=TEXT_BOX (17) L=0.79 T=1.33 W=11.04 H=3.20
+      TEXT: 'The Architecture of Absence: Quantifying Information Voids in Generative Models — Chen, L. & Martinez, J. (2025)' sizes=[190500, 190500] fonts=[None, None]
+      TEXT: 'Temporal Decay of Knowledge: Tracking Information Voids in Evolving LLM Versions — Thompson et al. (2025)' sizes=[190500, 190500] fonts=[None, None]
+      TEXT: 'Adversarial Red-Teaming for Information Coverage: A Multi-Agent GAN Approach — Roberts, D. et al. (2025)' sizes=[190500, 190500] fonts=[None, None]
+      TEXT: 'The Hallucination Buffer: When LLMs Infill Voids with Synthetic Truths — Zhao, X. et al. (2025)' sizes=[190500, 190500] fonts=[None, None]
+      TEXT: 'Entropy of Silence: Quantifying Semantic Voids in Aligned LLMs — Wu, T. & Singh, R. (2024)' sizes=[190500, 190500] fonts=[None, None]
+  - shape name='Google Shape;164;p23' type=TEXT_BOX (17) L=0.19 T=0.43 W=12.53 H=0.91
+      TEXT: 'Reference :- ' sizes=[355600] fonts=['IBM Plex Sans Condensed']
+================================================================================
+SLIDE 11  layout=BLANK
+  - shape name='Google Shape;170;p24' type=PLACEHOLDER (14) L=12.27 T=7.01 W=0.80 H=0.44
+  - shape name='Google Shape;171;p24' type=TEXT_BOX (17) L=2.18 T=2.07 W=8.98 H=0.67
+      TEXT: 'Thank you for your attention.' sizes=[355600] fonts=['Urbanist']

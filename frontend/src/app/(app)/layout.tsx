@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  LayoutDashboard, 
-  Database, 
-  FileText, 
-  MessageSquare, 
+import { useSession } from 'next-auth/react';
+import {
+  LayoutDashboard,
+  Database,
+  FileText,
+  MessageSquare,
   Settings,
   Menu,
   Search,
@@ -25,10 +26,70 @@ import {
 } from 'lucide-react';
 import { ThemeToggle } from '@/components/ThemeToggle';
 
+function initialsFrom(name?: string | null, email?: string | null): string {
+  const source = name?.trim() || email?.trim() || '';
+  if (!source) return '?';
+  const parts = source.includes('@') ? [source.split('@')[0]] : source.split(/\s+/);
+  return parts.slice(0, 2).map(p => p[0]?.toUpperCase() || '').join('') || '?';
+}
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
   const [isRightPanelOpen, setRightPanelOpen] = useState(false);
+  const [workspaceName, setWorkspaceName] = useState<string | null>(null);
+
+  const [systemHealth, setSystemHealth] = useState<{ online: boolean; pingMs: number | null; ollamaOnline: boolean }>({ online: false, pingMs: null, ollamaOnline: false });
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+
+  useEffect(() => {
+    let isMounted = true;
+    fetch('/api/workspaces')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => {
+        if (!isMounted || !data) return;
+        const list = Array.isArray(data) ? data : data.workspaces;
+        if (list && list.length > 0) setWorkspaceName(list[0].name);
+      })
+      .catch(() => {});
+
+    // Real, recent activity - same source the Workspace page's own
+    // Activity Log uses - instead of hardcoded "Processing Q3_Sales_Data" /
+    // "Customer_Churn_Model" cards that never reflected any real run.
+    fetch('/api/dashboard')
+      .then(res => res.ok ? res.json() : null)
+      .then(json => {
+        if (!isMounted) return;
+        const logs = (json?.data || json)?.activityLogs;
+        if (Array.isArray(logs)) setRecentActivity(logs.slice(0, 2));
+      })
+      .catch(() => {});
+
+    const checkHealth = () => {
+      const backendBase = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+      const start = performance.now();
+      fetch(`${backendBase}/api/v1/platform/system-health`)
+        .then(res => res.ok ? res.json() : Promise.reject())
+        .then(json => {
+          if (!isMounted) return;
+          setSystemHealth({
+            online: true,
+            pingMs: Math.round(performance.now() - start),
+            ollamaOnline: !!json?.data?.ollama?.online,
+          });
+        })
+        .catch(() => {
+          if (isMounted) setSystemHealth({ online: false, pingMs: null, ollamaOnline: false });
+        });
+    };
+    checkHealth();
+    const healthInterval = setInterval(checkHealth, 15000);
+
+    return () => { isMounted = false; clearInterval(healthInterval); };
+  }, []);
+
+  const userInitials = initialsFrom(session?.user?.name, session?.user?.email);
 
   const navItems = [
     { name: 'Workspace', href: '/dashboard', icon: LayoutDashboard },
@@ -63,8 +124,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </Link>
           
           <div className="hidden md:flex items-center gap-2 ml-4 px-3 py-1.5 rounded-md hover:bg-surface-hover cursor-pointer border border-transparent hover:border-border transition-colors">
-            <div className="w-5 h-5 rounded bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-[10px]">S</div>
-            <span className="text-sm font-medium">Stark Industries</span>
+            <div className="w-5 h-5 rounded bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold text-[10px]">{(workspaceName || '?')[0]}</div>
+            <span className="text-sm font-medium">{workspaceName || 'Loading...'}</span>
             <ChevronDown size={14} className="text-text-tertiary" />
           </div>
         </div>
@@ -85,8 +146,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <span className="absolute top-2 right-2 w-2 h-2 bg-danger rounded-full border-2 border-white"></span>
           </button>
           
-          <Link href="/profile" className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-accent text-white flex items-center justify-center font-medium text-xs shadow-sm ring-2 ring-white ml-1 overflow-hidden hover:scale-105 transition-transform">
-            SJ
+          <Link
+            href="/profile"
+            title={session?.user?.email || undefined}
+            className="w-8 h-8 rounded-full bg-gradient-to-tr from-primary to-accent text-white flex items-center justify-center font-medium text-xs shadow-sm ring-2 ring-white ml-1 overflow-hidden hover:scale-105 transition-transform"
+          >
+            {userInitials}
           </Link>
 
           <button 
@@ -194,28 +259,26 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 Current Activity
               </h4>
               <div className="space-y-4">
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-primary-light text-primary flex items-center justify-center shrink-0">
-                    <Database size={14} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-text-primary leading-tight">Processing Q3_Sales_Data</p>
-                    <p className="text-xs text-text-tertiary mt-1">Imputing missing values (67%)</p>
-                    <div className="w-full h-1.5 bg-surface-hover rounded-full mt-2 overflow-hidden">
-                      <div className="h-full bg-primary w-2/3 rounded-full"></div>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="flex gap-3">
-                  <div className="w-8 h-8 rounded-full bg-emerald-50 text-success flex items-center justify-center shrink-0">
-                    <CheckCircle2 size={14} />
-                  </div>
-                  <div>
-                    <p className="text-sm font-medium text-text-primary leading-tight">Customer_Churn_Model</p>
-                    <p className="text-xs text-text-tertiary mt-1">Training complete. Ready for review.</p>
-                  </div>
-                </div>
+                {recentActivity.length > 0 ? (
+                  recentActivity.map((log, idx) => {
+                    const failed = typeof log.action === 'string' && log.action.toLowerCase().startsWith('failed');
+                    return (
+                      <div className="flex gap-3" key={log.id || idx}>
+                        <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${failed ? 'bg-red-50 text-danger' : 'bg-emerald-50 text-success'}`}>
+                          {failed ? <Database size={14} /> : <CheckCircle2 size={14} />}
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-text-primary leading-tight">{log.action}</p>
+                          {log.createdAt && (
+                            <p className="text-xs text-text-tertiary mt-1">{new Date(log.createdAt).toLocaleString()}</p>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                ) : (
+                  <p className="text-xs text-text-tertiary">No recent activity yet.</p>
+                )}
               </div>
             </div>
 
@@ -226,14 +289,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 AI Suggestions
               </h4>
               <div className="space-y-3">
-                <div className="p-3 bg-white border border-border rounded-lg shadow-sm hover:border-primary-light cursor-pointer transition-colors">
-                  <p className="text-sm text-text-primary font-medium mb-1">Detect anomalies in new data</p>
-                  <p className="text-xs text-text-secondary">Your Q3_Sales_Data has a similar schema to previous anomaly detections.</p>
-                </div>
-                <div className="p-3 bg-white border border-border rounded-lg shadow-sm hover:border-primary-light cursor-pointer transition-colors">
-                  <p className="text-sm text-text-primary font-medium mb-1">Generate Executive Summary</p>
-                  <p className="text-xs text-text-secondary">You have 3 new insight clusters ready for reporting.</p>
-                </div>
+                <p className="text-xs text-text-tertiary">
+                  Automated suggestions are not available yet in this build.
+                </p>
               </div>
             </div>
 
@@ -245,10 +303,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               </h4>
               <div className="flex items-center justify-between p-3 bg-surface-hover rounded-lg border border-border">
                 <div className="flex items-center gap-2">
-                  <span className="w-2 h-2 rounded-full bg-success animate-pulse"></span>
-                  <span className="text-sm font-medium text-text-primary">All Systems Nominal</span>
+                  <span className={`w-2 h-2 rounded-full ${systemHealth.online ? 'bg-success animate-pulse' : 'bg-danger'}`}></span>
+                  <span className="text-sm font-medium text-text-primary">
+                    {systemHealth.online
+                      ? (systemHealth.ollamaOnline ? 'All Systems Nominal' : 'Backend Online, AI Model Offline')
+                      : 'Backend Unreachable'}
+                  </span>
                 </div>
-                <span className="text-xs text-text-tertiary">23ms ping</span>
+                <span className="text-xs text-text-tertiary">
+                  {systemHealth.pingMs !== null ? `${systemHealth.pingMs}ms ping` : '—'}
+                </span>
               </div>
             </div>
             

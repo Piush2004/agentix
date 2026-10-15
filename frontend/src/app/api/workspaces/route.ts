@@ -1,14 +1,12 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getOrCreateDefaultUser } from "@/lib/user";
 
 export async function GET() {
   const session = await auth();
-  let userId: string = (session?.user?.id as string) || "";
+  const userId = session?.user?.id as string | undefined;
   if (!userId) {
-    const defaultUser = await getOrCreateDefaultUser();
-    userId = (defaultUser?.id as string) || "default-user";
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
   let members = await prisma.workspaceMember.findMany({
@@ -51,6 +49,9 @@ export async function GET() {
   }));
 
   if (workspaces.length === 0) {
+    // First-time setup: every user needs at least one real workspace to own
+    // their own datasets. This is a real, empty workspace — no fabricated
+    // team, members, or activity are seeded alongside it.
     const personal = await prisma.workspace.create({
       data: {
         name: "Personal Workspace",
@@ -66,56 +67,6 @@ export async function GET() {
         role: "ADMIN"
       }
     });
-
-    const team = await prisma.workspace.create({
-      data: {
-        name: "Data Intelligence Team",
-        type: "TEAM",
-        ownerId: userId,
-      }
-    });
-
-    await prisma.workspaceMember.create({
-      data: {
-        workspaceId: team.id,
-        userId,
-        role: "ADMIN"
-      }
-    });
-
-    try {
-      const colleague = await prisma.user.create({
-        data: {
-          name: "Sarah Chen",
-          email: "sarah.chen@agentix.com",
-          role: "USER"
-        }
-      });
-      await prisma.workspaceMember.create({
-        data: {
-          workspaceId: team.id,
-          userId: colleague.id,
-          role: "EDITOR"
-        }
-      });
-      
-      const viewer = await prisma.user.create({
-        data: {
-          name: "Marcus Aurelius",
-          email: "marcus@agentix.com",
-          role: "USER"
-        }
-      });
-      await prisma.workspaceMember.create({
-        data: {
-          workspaceId: team.id,
-          userId: viewer.id,
-          role: "VIEWER"
-        }
-      });
-    } catch (e) {
-      console.warn("Could not seed demo team members", e);
-    }
 
     members = await prisma.workspaceMember.findMany({
       where: { userId },
@@ -162,10 +113,9 @@ export async function GET() {
 
 export async function POST(req: Request) {
   const session = await auth();
-  let userId: string = (session?.user?.id as string) || "";
+  const userId = session?.user?.id as string | undefined;
   if (!userId) {
-    const defaultUser = await getOrCreateDefaultUser();
-    userId = (defaultUser?.id as string) || "default-user";
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
   try {

@@ -1,16 +1,14 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Camera, 
-  Mail, 
-  MapPin, 
-  CheckCircle2, 
+import {
+  Camera,
+  Mail,
+  CheckCircle2,
   Settings2,
   User as UserIcon,
   Bell,
   Shield,
-  Briefcase,
   Loader2
 } from 'lucide-react';
 
@@ -103,20 +101,12 @@ export default function ProfilePage() {
               </button>
             </div>
             
-            <h3 className="text-xl font-bold text-text-primary mb-1 font-heading">{profile.firstName} {profile.lastName}</h3>
-            <div className="flex items-center gap-1.5 justify-center mb-6">
-              <Briefcase size={14} className="text-text-tertiary" />
-              <p className="text-text-secondary text-sm font-medium">Data Strategy Lead</p>
-            </div>
-            
+            <h3 className="text-xl font-bold text-text-primary mb-6 font-heading">{profile.firstName} {profile.lastName}</h3>
+
             <div className="w-full text-left space-y-3 pt-6 border-t border-border">
               <div className="flex items-center gap-3 text-text-secondary text-[13px] font-medium">
                 <Mail size={16} className="text-text-tertiary" />
                 <span>{profile.email}</span>
-              </div>
-              <div className="flex items-center gap-3 text-text-secondary text-[13px] font-medium">
-                <MapPin size={16} className="text-text-tertiary" />
-                <span>San Francisco, CA</span>
               </div>
             </div>
           </motion.div>

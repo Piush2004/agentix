@@ -17,12 +17,15 @@ import {
   TrendingUp,
   Lightbulb
 } from 'lucide-react';
+import { useSession } from 'next-auth/react';
 import { getTerm } from '@/lib/terminology';
 import { SystemHealthDashboard } from '@/components/SystemHealth';
 import { useAiPersona } from '@/hooks/useAiPersona';
 
 export default function WorkspacePage() {
   const { isExecutive } = useAiPersona();
+  const { data: session } = useSession();
+  const displayName = session?.user?.name?.split(' ')[0] || session?.user?.email?.split('@')[0] || 'there';
   const [data, setData] = useState<any>(null);
   const [workflowNodes, setWorkflowNodes] = useState<any[]>([]);
   const [activityLogs, setActivityLogs] = useState<any[]>([]);
@@ -99,7 +102,7 @@ export default function WorkspacePage() {
         >
           <div>
             <h1 className="text-5xl font-black tracking-tight text-gray-900 mb-6 font-heading bg-clip-text text-transparent bg-gradient-to-r from-indigo-600 to-purple-600">
-              Welcome back, Sarah
+              Welcome back, {displayName}
             </h1>
             <div className="text-[17px] text-gray-600 leading-relaxed max-w-2xl space-y-4">
               <p>Good morning. Let's build something extraordinary today.</p>
@@ -107,7 +110,6 @@ export default function WorkspacePage() {
               <ul className="list-disc pl-5 space-y-2 font-medium text-gray-800">
                 <li>{data?.recentDatasets?.length || 0} recent datasets ready for review</li>
                 <li>{data?.recentReports?.length || 0} completed intelligence reports</li>
-                <li>1 dataset that may need retraining</li>
               </ul>
             </div>
           </div>
@@ -149,16 +151,20 @@ export default function WorkspacePage() {
             <div className="flex items-center min-w-max gap-3 relative">
               {isLoading ? (
                  <div className="text-gray-400 text-sm flex items-center gap-2 font-medium"><Loader2 className="animate-spin text-indigo-500" size={18}/> Initializing agent workflow...</div>
+              ) : workflowNodes.length === 0 ? (
+                 <div className="text-gray-400 text-sm font-medium">No pipeline has been run yet. Upload a dataset to see live progress here.</div>
               ) : (
                 workflowNodes.map((step, idx) => {
                   const isActive = step.status === 'In Progress';
                   const isDone = step.status === 'Completed';
+                  const isFailed = step.status === 'Failed';
                   return (
                     <React.Fragment key={step.id}>
                       <div className={`flex flex-col items-center transition-all duration-500 ${isActive ? 'scale-110 z-10' : 'scale-100 opacity-90'}`}>
                         <div className={`h-12 px-6 rounded-2xl flex items-center justify-center font-bold text-[14px] border-2 transition-all duration-300 ${
-                          isActive ? 'bg-gradient-to-r from-indigo-500 to-purple-500 border-transparent text-white shadow-[0_8px_24px_rgba(99,102,241,0.4)]' : 
-                          isDone ? 'bg-white border-indigo-200 text-indigo-600 shadow-sm' : 
+                          isActive ? 'bg-gradient-to-r from-indigo-500 to-purple-500 border-transparent text-white shadow-[0_8px_24px_rgba(99,102,241,0.4)]' :
+                          isFailed ? 'bg-red-50 border-red-200 text-red-600' :
+                          isDone ? 'bg-white border-indigo-200 text-indigo-600 shadow-sm' :
                           'bg-white/50 border-white/60 text-gray-400 backdrop-blur-sm'
                         }`}>
                           {getTerm(step.label)}
@@ -266,17 +272,17 @@ export default function WorkspacePage() {
                   <div className="grid grid-cols-3 gap-4">
                     <div className="bg-white/70 rounded-2xl p-5 border border-white shadow-[0_4px_16px_rgba(0,0,0,0.02)] text-center hover:scale-105 transition-transform duration-300">
                       <Database size={24} className="mx-auto mb-3 text-indigo-500" />
-                      <div className="text-3xl font-black text-gray-800 bg-clip-text text-transparent bg-gradient-to-br from-gray-800 to-gray-500">{benchmarkStats.total_benchmark_datasets || 142}</div>
+                      <div className="text-3xl font-black text-gray-800 bg-clip-text text-transparent bg-gradient-to-br from-gray-800 to-gray-500">{benchmarkStats.total_benchmark_datasets ?? 0}</div>
                       <div className="text-[11px] text-gray-500 font-bold uppercase tracking-wider mt-2">Datasets</div>
                     </div>
                     <div className="bg-white/70 rounded-2xl p-5 border border-white shadow-[0_4px_16px_rgba(0,0,0,0.02)] text-center hover:scale-105 transition-transform duration-300">
                       <FlaskConical size={24} className="mx-auto mb-3 text-amber-500" />
-                      <div className="text-3xl font-black text-gray-800 bg-clip-text text-transparent bg-gradient-to-br from-gray-800 to-gray-500">{benchmarkStats.total_experiments || 4890}</div>
+                      <div className="text-3xl font-black text-gray-800 bg-clip-text text-transparent bg-gradient-to-br from-gray-800 to-gray-500">{benchmarkStats.total_experiments ?? 0}</div>
                       <div className="text-[11px] text-gray-500 font-bold uppercase tracking-wider mt-2">Experiments</div>
                     </div>
                     <div className="bg-white/70 rounded-2xl p-5 border border-white shadow-[0_4px_16px_rgba(0,0,0,0.02)] text-center hover:scale-105 transition-transform duration-300">
                       <Lightbulb size={24} className="mx-auto mb-3 text-emerald-500" />
-                      <div className="text-3xl font-black text-gray-800 bg-clip-text text-transparent bg-gradient-to-br from-gray-800 to-gray-500">{benchmarkStats.total_strategy_reasonings || 892}</div>
+                      <div className="text-3xl font-black text-gray-800 bg-clip-text text-transparent bg-gradient-to-br from-gray-800 to-gray-500">{benchmarkStats.total_strategy_reasonings ?? 0}</div>
                       <div className="text-[11px] text-gray-500 font-bold uppercase tracking-wider mt-2">Strategies</div>
                     </div>
                   </div>
@@ -296,19 +302,23 @@ export default function WorkspacePage() {
                           </tr>
                         </thead>
                         <tbody>
-                          {(benchmarkStats.top_experiments || [
-                            { dataset: 'Credit Risk', model: 'XGBoost', cv_score: 0.942 },
-                            { dataset: 'Churn Prediction', model: 'LightGBM', cv_score: 0.918 },
-                            { dataset: 'Sales Forecast', model: 'Random Forest', cv_score: 0.885 }
-                          ]).slice(0, 4).map((exp: any, i: number) => (
-                            <tr key={i} className="border-b border-gray-100 last:border-0 hover:bg-white/80 transition-colors">
-                              <td className="p-4 font-bold text-gray-800">{exp.dataset}</td>
-                              <td className="p-4">
-                                <span className="px-3 py-1.5 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 text-xs font-bold shadow-sm">{exp.model}</span>
+                          {(benchmarkStats.top_experiments || []).length === 0 ? (
+                            <tr>
+                              <td colSpan={3} className="p-4 text-center text-gray-400 text-sm">
+                                No completed training runs yet.
                               </td>
-                              <td className="p-4 text-right font-black text-emerald-500">{exp.cv_score?.toFixed(3)}</td>
                             </tr>
-                          ))}
+                          ) : (
+                            benchmarkStats.top_experiments.slice(0, 4).map((exp: any, i: number) => (
+                              <tr key={i} className="border-b border-gray-100 last:border-0 hover:bg-white/80 transition-colors">
+                                <td className="p-4 font-bold text-gray-800">{exp.dataset}</td>
+                                <td className="p-4">
+                                  <span className="px-3 py-1.5 rounded-xl bg-purple-50 text-purple-600 border border-purple-100 text-xs font-bold shadow-sm">{exp.model}</span>
+                                </td>
+                                <td className="p-4 text-right font-black text-emerald-500">{exp.cv_score?.toFixed(3)}</td>
+                              </tr>
+                            ))
+                          )}
                         </tbody>
                       </table>
                     </div>

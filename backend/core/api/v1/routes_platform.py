@@ -1,5 +1,7 @@
 import json
 import logging
+import os
+import shutil
 from typing import Optional, Any, Dict
 
 from fastapi import APIRouter, HTTPException, BackgroundTasks
@@ -61,6 +63,28 @@ def _stage_result(db: Session, run_id: str, agent_name: str) -> Optional[Dict[st
 
 @router.post("/profile", response_model=BaseResponse)
 async def profile_endpoint(req: DatasetRequest):
+    # Bug fix: this endpoint used to unconditionally call orchestrator.start_pipeline()
+    # + re-run ProfilingAgent live against data_service's in-memory dict, every time it
+    # was hit. Two real problems resulted: (1) data_service is keyed only by dataset_name,
+    # so once the full pipeline had run past Profiling (Cleaning/FeatureEngineering
+    # overwrite the same key), a live re-profile after that point returned stats for the
+    # *transformed* data (e.g. one-hot-encoded column count, post-imputation zero missing)
+    # rather than the raw upload — while still being displayed as the dataset's raw
+    # Overview. (2) start_pipeline() created a brand new WorkflowRun with no dataset_id
+    # every single call, which was never marked completed/failed — the source of the
+    # orphaned WorkflowRun rows stuck at status="started" found in the database.
+    # Fix: prefer the already-persisted ProfilingAgent result from the dataset's latest
+    # completed run (same pattern as /eda, /xai, /insights below), and only fall back to
+    # a live single-stage profile when no pipeline has been run for this dataset yet.
+    db = SessionLocal()
+    try:
+        _, run = _latest_dataset_and_run(db, req.dataset_name)
+        persisted = _stage_result(db, run.id if run else None, "ProfilingAgent")
+        if persisted is not None:
+            return BaseResponse(status="success", message="OK", data=persisted)
+    finally:
+        db.close()
+
     user_id = current_user_id.get() or "guest_user"
     try:
         run_id = orchestrator.start_pipeline(user_id=user_id)
@@ -415,11 +439,35 @@ async def dashboard_metrics_endpoint():
 
         registry = ModelRegistry.get_registry()
 
+        # Real per-stage progress for the latest run, so the dashboard's
+        # "Current Workflow Progress" bar reflects the actual pipeline instead
+        # of the previously-hardcoded all-"Completed" fallback the frontend
+        # fell back to on every load (the old /workflow-status call required a
+        # run_id the frontend never had, so it 422'd and silently kept the
+        # fake data every single time).
+        stages_out = []
+        if latest_run:
+            stages = (
+                db.query(PipelineStage)
+                .filter_by(run_id=latest_run.id)
+                .order_by(PipelineStage.step_order)
+                .all()
+            )
+            stages_out = [
+                {
+                    "agent_name": stage.agent_name,
+                    "status": stage.status,
+                    "duration": stage.execution_time,
+                }
+                for stage in stages
+            ]
+
         data = {
             "active_dataset": active_dataset,
             "best_model": best_model,
             "model_accuracy": model_accuracy,
             "workflow_state": workflow_state,
+            "stages": stages_out,
             "ollama_status": "Online" if registry["has_local_llm"] else "Offline",
             "gemini_status": "Online" if registry["gemini_available"] else "Offline",
         }
@@ -446,6 +494,31 @@ async def system_health_endpoint():
         "gemini_configured": registry["gemini_available"],
     }
     return BaseResponse(status="success", message="OK", data=data)
+
+
+@router.get("/storage", response_model=BaseResponse)
+async def storage_endpoint():
+    """Real disk usage for the uploaded-dataset directory and the volume it
+    lives on. Replaces a frontend call to an endpoint that never existed."""
+    upload_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "../../../data/temp")
+    used_by_datasets_bytes = 0
+    if os.path.isdir(upload_dir):
+        for root, _dirs, files in os.walk(upload_dir):
+            for name in files:
+                try:
+                    used_by_datasets_bytes += os.path.getsize(os.path.join(root, name))
+                except OSError:
+                    pass
+    disk_total, _disk_used, disk_free = shutil.disk_usage(upload_dir if os.path.isdir(upload_dir) else ".")
+    return BaseResponse(
+        status="success",
+        message="OK",
+        data={
+            "used_gb": round(used_by_datasets_bytes / (1024 ** 3), 2),
+            "total_gb": round(disk_total / (1024 ** 3), 2),
+            "free_gb": round(disk_free / (1024 ** 3), 2),
+        },
+    )
 
 
 @router.get("/model-registry", response_model=BaseResponse)
@@ -491,6 +564,55 @@ async def dataset_versions_endpoint(dataset_name: str):
 @router.post("/dataset-versions/rollback", response_model=BaseResponse)
 async def rollback_dataset_version_endpoint(req: DatasetRequest, version: int):
     raise HTTPException(status_code=501, detail="Dataset versioning is not implemented yet.")
+
+
+@router.get("/benchmark-stats", response_model=BaseResponse)
+async def benchmark_stats_endpoint():
+    # Real counts from the database - the frontend previously showed a
+    # hardcoded 142/4890/892 whenever this call failed (it always failed:
+    # the route didn't exist here at all, and the frontend proxy pointed at
+    # the wrong port). "strategy_reasonings" has no dedicated concept in
+    # this codebase yet, so it's mapped to completed pipeline stages (each
+    # one is a real executed processing/reasoning step) rather than invented.
+    db = SessionLocal()
+    try:
+        total_datasets = db.query(Dataset).count()
+        total_experiments = db.query(WorkflowRun).count()
+        total_strategy_reasonings = db.query(PipelineStage).filter_by(status="completed").count()
+
+        top_runs = (
+            db.query(WorkflowRun)
+            .filter(WorkflowRun.status == "completed")
+            .order_by(WorkflowRun.created_at.desc())
+            .limit(20)
+            .all()
+        )
+        scored = []
+        for run in top_runs:
+            training = _stage_result(db, run.id, "TrainingAgent")
+            evaluation = _stage_result(db, run.id, "EvaluationAgent")
+            if not training or not evaluation:
+                continue
+            score = evaluation.get("accuracy", evaluation.get("r2"))
+            if score is None:
+                continue
+            dataset = db.query(Dataset).filter_by(id=run.dataset_id).first() if run.dataset_id else None
+            scored.append({
+                "dataset": dataset.name if dataset else "dataset",
+                "model": training.get("model_type", "Model"),
+                "cv_score": score,
+            })
+        top_experiments = sorted(scored, key=lambda e: e["cv_score"], reverse=True)[:4]
+
+        data = {
+            "total_benchmark_datasets": total_datasets,
+            "total_experiments": total_experiments,
+            "total_strategy_reasonings": total_strategy_reasonings,
+            "top_experiments": top_experiments,
+        }
+        return BaseResponse(status="success", message="OK", data=data)
+    finally:
+        db.close()
 
 
 @router.get("/recent-activity", response_model=BaseResponse)

@@ -161,15 +161,15 @@ export default function AnalysisPage() {
                             </div>
                             <div className="bg-white p-4 rounded-xl border border-border shadow-sm">
                               <p className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-1">Columns</p>
-                              <p className="text-2xl font-bold text-text-primary">{profileData.columns || 0}</p>
+                              <p className="text-2xl font-bold text-text-primary">{profileData.cols || 0}</p>
                             </div>
                             <div className="bg-white p-4 rounded-xl border border-border shadow-sm">
                               <p className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-1">Missing</p>
-                              <p className="text-2xl font-bold text-warning">{profileData.missing_cells || 0}</p>
+                              <p className="text-2xl font-bold text-warning">{profileData.missing || 0}</p>
                             </div>
                             <div className="bg-white p-4 rounded-xl border border-border shadow-sm">
                               <p className="text-xs font-bold text-text-tertiary uppercase tracking-wider mb-1">Duplicates</p>
-                              <p className="text-2xl font-bold text-primary mt-1">{profileData.duplicate_rows || 0}</p>
+                              <p className="text-2xl font-bold text-primary mt-1">{profileData.duplicates || 0}</p>
                             </div>
                           </div>
                         ) : (

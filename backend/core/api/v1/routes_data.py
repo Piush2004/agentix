@@ -122,13 +122,34 @@ def upload_complete(req: UploadCompleteReq, background_tasks: BackgroundTasks):
     final_file_path = os.path.join(TEMP_UPLOAD_DIR, unique_dataset_name)
     
     # re-assemble chunks
+    # Real size enforcement: /upload/init's MAX_FILE_SIZE_BYTES check only ever
+    # validated the client-declared total_size, which the caller controls and
+    # was never cross-checked - a client could declare a tiny size to pass that
+    # check, then upload arbitrarily many/large real chunks, since /upload/chunk
+    # has no size check either, giving unbounded disk usage. Verified: declaring
+    # total_size=100 bytes then uploading 3 real ~5MB chunks (14.4MB) was
+    # previously accepted with no rejection. Enforce the real limit against the
+    # actual bytes being written here, not the declared intent.
     chunks = sorted(os.listdir(upload_dir), key=lambda x: int(x.split("_")[1]))
-    with open(final_file_path, "wb") as out_file:
-        for chunk_name in chunks:
-            chunk_path = os.path.join(upload_dir, chunk_name)
-            with open(chunk_path, "rb") as in_file:
-                out_file.write(in_file.read())
-            os.remove(chunk_path)
+    written_bytes = 0
+    try:
+        with open(final_file_path, "wb") as out_file:
+            for chunk_name in chunks:
+                chunk_path = os.path.join(upload_dir, chunk_name)
+                with open(chunk_path, "rb") as in_file:
+                    data = in_file.read()
+                written_bytes += len(data)
+                if written_bytes > MAX_FILE_SIZE_BYTES:
+                    raise ValueError(f"Reassembled file exceeds maximum size of {MAX_FILE_SIZE_MB}MB.")
+                out_file.write(data)
+                os.remove(chunk_path)
+    except ValueError as size_exc:
+        if os.path.exists(final_file_path):
+            os.remove(final_file_path)
+        for leftover in os.listdir(upload_dir):
+            os.remove(os.path.join(upload_dir, leftover))
+        os.rmdir(upload_dir)
+        raise HTTPException(status_code=413, detail=str(size_exc))
     os.rmdir(upload_dir)
     
     # Validation Phase

@@ -1,0 +1,97 @@
+=== slide9 body ===
+p[0] align=LEFT (1)
+   run 0 'Probabilistic Nature → ' bold=True size=190500 color=SCHEME (2) font=None
+   run 1 'Information Omission: LLMs predict likely text, ignoring less probable but important facts → partial answers (Synthetic Silence)' bold=None size=190500 color=SCHEME (2) font=None
+p[1] align=LEFT (1)
+   run 0 '' bold=None size=None color=None font=None
+p[2] align=LEFT (1)
+   run 0 'Knowledge Gaps → ' bold=True size=190500 color=SCHEME (2) font=None
+   run 1 'Hallucination + Silence: Incomplete training data causes LLMs to either guess (hallucinate) or omit critical information' bold=None size=190500 color=SCHEME (2) font=None
+p[3] align=LEFT (1)
+   run 0 '' bold=None size=None color=None font=None
+p[4] align=LEFT (1)
+   run 0 'Confidence & Alignment Issues: ' bold=True size=190500 color=SCHEME (2) font=None
+   run 1 'LLMs give confident answers without expressing uncertainty, often hiding missing or filtered information' bold=None size=190500 color=SCHEME (2) font=None
+p[5] align=LEFT (1)
+   run 0 '' bold=None size=None color=None font=None
+p[6] align=LEFT (1)
+   run 0 'Safety Filtering → ' bold=True size=190500 color=SCHEME (2) font=None
+   run 1 'Over-Sanitization: Alignment policies can suppress useful or sensitive details, leading to incomplete responses' bold=None size=190500 color=SCHEME (2) font=None
+p[7] align=LEFT (1)
+   run 0 '' bold=None size=None color=None font=None
+p[8] align=LEFT (1)
+   run 0 'Future Risk & Solution: ' bold=True size=190500 color=SCHEME (2) font=None
+   run 1 'LLM failures will stem from missing information, requiring uncertainty estimation, “I don’t know” responses, and explainable AI systems' bold=None size=190500 color=SCHEME (2) font=None
+=== slide2 body ===
+p[0] align=LEFT (1)
+   run 0 'THE "INFORMATION VOID" PROBLEM' bold=True size=419100 color=0C5394 font=Urbanist
+p[1] align=LEFT (1)
+   run 0 'HALLUCINATION' bold=True size=228600 color=0C5394 font=Urbanist
+p[2] align=LEFT (1)
+   run 0 'Errors of ' bold=True size=190500 color=0C5394 font=Urbanist
+   run 1 'commission' bold=True size=190500 color=0C5394 font=Urbanist
+   run 2 '. The model generates confident but false ' bold=True size=190500 color=0C5394 font=Urbanist
+p[3] align=LEFT (1)
+   run 0 'information where data is thin.' bold=True size=190500 color=0C5394 font=Urbanist
+p[4] align=LEFT (1)
+   run 0 'SYNTHETIC SILENCE' bold=True size=228600 color=0C5394 font=Urbanist
+p[5] align=LEFT (1)
+   run 0 'Errors of ' bold=True size=190500 color=0C5394 font=Urbanist
+   run 1 'omission' bold=True size=190500 color=0C5394 font=Urbanist
+   run 2 '. Systematic blind spots where the model fails ' bold=True size=190500 color=0C5394 font=Urbanist
+p[6] align=LEFT (1)
+   run 0 'to learn structure entirely.' bold=True size=190500 color=0C5394 font=Urbanist
+p[7] align=LEFT (1)
+   run 0 'VOID MAPPING' bold=True size=228600 color=0C5394 font=Urbanist
+p[8] align=LEFT (1)
+   run 0 'The quest to quantify semantic coverage. What is the model ' bold=True size=190500 color=0C5394 font=Urbanist
+   run 1 'not' bold=True size=190500 color=0C5394 font=Urbanist
+   run 2 'telling us?' bold=True size=190500 color=0C5394 font=Urbanist
+p[9] align=CENTER (2)
+   run 0 '"Generative models are evaluated on what they produce, not what they fail to produce."' bold=True size=190500 color=0C5394 font=Urbanist
+=== slide8 t3 label ===
+p[0] align=CENTER (2)
+   run 0 'TRIMESTER ' bold=True size=190500 color=SCHEME (2) font=Urbanist
+   run 1 '3' bold=True size=190500 color=SCHEME (2) font=Urbanist
+=== slide8 t4 label ===
+p[0] align=CENTER (2)
+   run 0 'TRIMESTER ' bold=True size=190500 color=SCHEME (2) font=Urbanist
+   run 1 '4' bold=True size=190500 color=SCHEME (2) font=Urbanist
+=== slide8 t4 desc ===
+p[0] align=CENTER (2)
+   run 0 'Building ' bold=False size=190500 color=94A3B8 font=Urbanist
+   run 1 '"Unbiased Generative Guardians"' bold=True size=190500 color=94A3B8 font=Urbanist
+   run 2 ' middleware.' bold=False size=190500 color=94A3B8 font=Urbanist
+=== slide1 ===
+p[0] align=LEFT (1)
+   run 0 '' bold=None size=None color=None font=None
+p[1] align=CENTER (2)
+   run 0 'SYNTHETIC SILENCE' bold=True size=609600 color=D2AE6C font=Urbanist
+p[2] align=CENTER (2)
+   run 0 'Mapping Information Voids and Research Gaps in Generative AI Systems using TT-WGAN-GP Frameworks' bold=True size=266700 color=0C5394 font=Urbanist
+   run 1 'Piush Kole (2548421)' bold=True size=266700 color=0C5394 font=Urbanist
+   run 2 'Thrilok M(2548430)' bold=True size=266700 color=0C5394 font=Urbanist
+   run 3 'Guided By- Dr. Deepa BG. ' bold=True size=266700 color=0C5394 font=Urbanist
+=== slide10 refs ===
+p[0] align=LEFT (1)
+   run 0 'The Architecture of Absence: Quantifying Information Voids in Generative Models' bold=None size=190500 color=SCHEME (2) font=None
+   run 1 ' — Chen, L. & Martinez, J. (2025)' bold=None size=190500 color=SCHEME (2) font=None
+p[1] align=LEFT (1)
+   run 0 'Temporal Decay of Knowledge: Tracking Information Voids in Evolving LLM Versions' bold=None size=190500 color=SCHEME (2) font=None
+   run 1 ' — Thompson et al. (2025)' bold=None size=190500 color=SCHEME (2) font=None
+p[2] align=LEFT (1)
+   run 0 'Adversarial Red-Teaming for Information Coverage: A Multi-Agent GAN Approach' bold=None size=190500 color=SCHEME (2) font=None
+   run 1 ' — Roberts, D. et al. (2025)' bold=None size=190500 color=SCHEME (2) font=None
+p[3] align=LEFT (1)
+   run 0 'The Hallucination Buffer: When LLMs Infill Voids with Synthetic Truths' bold=None size=190500 color=SCHEME (2) font=None
+   run 1 ' — Zhao, X. et al. (2025)' bold=None size=190500 color=SCHEME (2) font=None
+p[4] align=LEFT (1)
+   run 0 'Entropy of Silence: Quantifying Semantic Voids in Aligned LLMs' bold=None size=190500 color=SCHEME (2) font=None
+   run 1 ' — Wu, T. & Singh, R. (2024)' bold=None size=190500 color=SCHEME (2) font=None
+p[5] align=LEFT (1)
+   run 0 '' bold=None size=None color=None font=None
+=== slide9 heading ===
+p[0] align=LEFT (1)
+   run 0 'Summary and Future ' bold=True size=419100 color=D2AE6C font=Urbanist
+   run 1 'Aspects' bold=True size=419100 color=D2AE6C font=Urbanist
+   run 2 ':- ' bold=True size=419100 color=D2AE6C font=Urbanist

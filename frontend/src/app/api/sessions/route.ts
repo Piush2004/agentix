@@ -1,66 +1,30 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getOrCreateDefaultUser } from "@/lib/user";
 
 export async function GET() {
   const session = await auth();
-  let userId: string = (session?.user?.id as string) || "";
+  const userId = session?.user?.id as string | undefined;
   if (!userId) {
-    const defaultUser = await getOrCreateDefaultUser();
-    userId = (defaultUser?.id as string) || "default-user";
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
-  let activeSessions = await prisma.session.findMany({
+  // Real sessions only. This app uses NextAuth's JWT session strategy, so the
+  // Prisma Session table is not authoritative for "who's logged in right
+  // now" — it may legitimately be empty. No fabricated device/IP data.
+  const activeSessions = await prisma.session.findMany({
     where: { userId },
     orderBy: { lastActive: "desc" },
   });
-
-  const hasPopulated = activeSessions.some(s => s.ipAddress !== null);
-  if (!hasPopulated) {
-    const userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/121.0.0.0 Safari/537.36";
-    
-    await prisma.session.updateMany({
-      where: { userId },
-      data: {
-        ipAddress: "127.0.0.1",
-        userAgent,
-        deviceType: "Desktop (Windows)",
-        lastActive: new Date(),
-      }
-    });
-
-    try {
-      await prisma.session.create({
-        data: {
-          userId,
-          sessionToken: `mock_session_${Math.random().toString(36).substring(2)}`,
-          expires: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7),
-          ipAddress: "192.168.1.45",
-          userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_2 like Mac OS X) AppleWebKit/605.1.15 Mobile/15E148 Safari/604.1",
-          deviceType: "Mobile (iPhone)",
-          lastActive: new Date(Date.now() - 1000 * 60 * 30),
-        }
-      });
-    } catch (e) {
-      console.warn("Could not create mock active session", e);
-    }
-
-    activeSessions = await prisma.session.findMany({
-      where: { userId },
-      orderBy: { lastActive: "desc" },
-    });
-  }
 
   return NextResponse.json({ status: "success", sessions: activeSessions });
 }
 
 export async function DELETE(req: Request) {
   const session = await auth();
-  let userId: string = (session?.user?.id as string) || "";
+  const userId = session?.user?.id as string | undefined;
   if (!userId) {
-    const defaultUser = await getOrCreateDefaultUser();
-    userId = (defaultUser?.id as string) || "default-user";
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
   try {

@@ -10,7 +10,7 @@ from core.engines.base import ProcessingEngine
 from sklearn.linear_model import SGDClassifier, SGDRegressor
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import accuracy_score, f1_score, mean_absolute_error, mean_squared_error, r2_score
-from sklearn.preprocessing import StandardScaler
+from sklearn.preprocessing import StandardScaler, LabelEncoder
 
 class PipelineInput(BaseModel):
     dataset_name: str
@@ -93,6 +93,17 @@ class CleaningAgent(BaseAgent[PipelineInput, PipelineOutput]):
         for col in num_cols:
             missing_count = int(df[col].isna().sum())
             if missing_count == 0:
+                continue
+            if missing_count == len(df):
+                # Column has zero observed values - mean()/median() are themselves NaN
+                # here (no data to average), so fillna(NaN) is a silent no-op that would
+                # otherwise be reported as a successful fill. Report the true state
+                # instead of a false "filled: N" success claim.
+                imputation[col] = {
+                    "method": "none",
+                    "filled": 0,
+                    "reason": "column has no observed values at all; no mean/median could be computed, so it was left as-is",
+                }
                 continue
             skew = df[col].skew()
             skew = 0.0 if pd.isna(skew) else float(skew)
@@ -286,17 +297,44 @@ class TrainingAgent(BaseAgent[PipelineInput, PipelineOutput]):
 
         if is_regression:
             problem_type = "regression"
+            # SGDRegressor is just as scale-sensitive about the TARGET as it is about
+            # the features above: fitting directly against an unscaled target (e.g.
+            # house prices in the hundreds of thousands) makes a single partial_fit
+            # pass produce huge gradients and converge nowhere near the optimum -
+            # verified empirically: on a dataset generated from a known linear
+            # relationship plus small noise (where R^2 should be ~0.99), the
+            # unscaled-target model scored R^2 ~ 0.37. Scaling y the same way X is
+            # scaled, then inverse-transforming predictions back to real units before
+            # they're used for evaluation/reporting, fixes this without changing the
+            # units MAE/RMSE are reported in.
+            y_scaler = StandardScaler()
+            y_train_scaled = y_scaler.fit_transform(y_train.to_numpy().reshape(-1, 1)).ravel()
             model = SGDRegressor(random_state=42)
-            model.partial_fit(X_train_scaled, y_train)
+            model.partial_fit(X_train_scaled, y_train_scaled)
+            y_pred_scaled = model.predict(X_test_scaled)
+            y_pred = y_scaler.inverse_transform(y_pred_scaled.reshape(-1, 1)).ravel()
         else:
             problem_type = "classification"
-            classes = np.unique(y_train)
+            # SGDClassifier.partial_fit requires labels sklearn recognizes as a
+            # discrete type (int/bool/str) via type_of_target. A numeric target
+            # that is legitimately a classification target by cardinality (e.g.
+            # only 3 distinct values) but happens to hold non-integer floats -
+            # observed for real on a live dataset with values like -1.25/0/1.25 -
+            # is rejected outright with "ValueError: Unknown label type", crashing
+            # training even though the cardinality-based classification decision
+            # above was correct. Encode to plain integer class labels for fitting
+            # regardless of the target's original dtype, then decode predictions
+            # back so y_pred stays in the same value-space as y_test (which is
+            # left unencoded) for EvaluationAgent's accuracy/F1 comparison.
+            label_encoder = LabelEncoder()
+            y_train_encoded = label_encoder.fit_transform(y_train)
+            classes = np.unique(y_train_encoded)
             if len(classes) < 2:
                 raise ValueError(f"Target column '{target}' has fewer than 2 distinct classes; cannot train a classifier.")
             model = SGDClassifier(loss='log_loss', random_state=42)
-            model.partial_fit(X_train_scaled, y_train, classes=classes)
-
-        y_pred = model.predict(X_test_scaled)
+            model.partial_fit(X_train_scaled, y_train_encoded, classes=classes)
+            y_pred_encoded = model.predict(X_test_scaled)
+            y_pred = label_encoder.inverse_transform(y_pred_encoded)
 
         # Real per-feature importance from the trained linear model's coefficients
         # (mean absolute weight across classes for multi-class), instead of a
@@ -364,8 +402,21 @@ class EvaluationAgent(BaseAgent[PipelineInput, PipelineOutput]):
             r2 = r2_score(y_test, y_pred) if len(y_test) > 1 else float("nan")
             result = {"problem_type": problem_type, "mae": _clean(mae), "rmse": _clean(rmse), "r2": _clean(r2)}
         else:
-            acc = accuracy_score(y_test, y_pred)
-            f1 = f1_score(y_test, y_pred, average="weighted", zero_division=0)
+            # sklearn's accuracy_score/f1_score call type_of_target on the raw
+            # values first and reject anything it infers as "continuous" - which
+            # includes a legitimate small-cardinality classification target that
+            # happens to hold non-integer floats (e.g. -1.25/0/1.25, the same
+            # label shape TrainingAgent had to LabelEncode around above).
+            # Comparing as strings sidesteps that misclassification without
+            # changing which rows count as correct: y_test/y_pred are compared
+            # by value equality either way, and both come from the same
+            # original label values (y_pred was decoded back via the training
+            # LabelEncoder's own classes_), so string formatting is identical
+            # for equal values.
+            y_test_labels = pd.Series(y_test).astype(str)
+            y_pred_labels = pd.Series(y_pred).astype(str)
+            acc = accuracy_score(y_test_labels, y_pred_labels)
+            f1 = f1_score(y_test_labels, y_pred_labels, average="weighted", zero_division=0)
             result = {"problem_type": problem_type, "accuracy": float(acc), "f1_score": float(f1)}
 
         return PipelineOutput(status="success", message="Evaluation complete", result=result)
@@ -380,9 +431,33 @@ class EvaluationAgent(BaseAgent[PipelineInput, PipelineOutput]):
 class ReportAgent(BaseAgent[PipelineInput, PipelineOutput]):
     def validate(self, data: Any) -> PipelineInput:
         return PipelineInput(**data) if isinstance(data, dict) else data
-        
+
     def execute(self, validated_data: PipelineInput, engine: ProcessingEngine) -> PipelineOutput:
-        return PipelineOutput(status="success", message="Report generated", result={"report_url": f"/reports/{validated_data.dataset_name}_report.pdf"})
+        # No PDF renderer is wired up (no library for it, and building one is a
+        # separate feature). Rather than pointing at a file that was never
+        # generated, report real summary data pulled from the actual pipeline
+        # state, and say plainly that a downloadable file isn't available yet.
+        dataset_info = data_service.get_dataset(validated_data.dataset_name) or {}
+        parquet_path = dataset_info.get("parquet_path")
+
+        summary: Dict[str, Any] = {
+            "dataset_name": validated_data.dataset_name,
+            "target_column": dataset_info.get("target_column"),
+            "problem_type": dataset_info.get("problem_type"),
+            "pdf_available": False,
+            "pdf_url": None,
+            "message": "PDF export is not implemented yet. The summary below reflects this run's real pipeline results.",
+        }
+
+        if parquet_path:
+            try:
+                df = engine.compute(engine.load_dataset(parquet_path))
+                summary["rows"] = int(df.shape[0])
+                summary["cols"] = int(df.shape[1])
+            except Exception:
+                pass
+
+        return PipelineOutput(status="success", message="Report summary generated", result=summary)
 
     def cleanup(self) -> None:
         pass

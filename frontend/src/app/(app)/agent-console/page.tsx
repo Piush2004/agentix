@@ -1,11 +1,10 @@
 "use client";
 import React, { useState, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  Trash2, 
-  Download, 
-  Send, 
-  Lightbulb, 
+import {
+  Trash2,
+  Download,
+  Send,
   Loader2,
   Bot
 } from 'lucide-react';
@@ -18,76 +17,9 @@ type Message = {
     isError?: boolean;
 };
 
-const defaultMockupMessages: Message[] = [
-    {
-        id: 'mock-user-1',
-        role: 'user',
-        content: "Which region had the highest total revenue in our sales data last month? Can you show me a chart?"
-    },
-    {
-        id: 'mock-agent-1',
-        role: 'agent',
-        content: (
-            <>
-                <p className="mb-4">
-                    I analyzed the <strong>Q3_Sales_Data.xlsx</strong> dataset. 
-                    The region with the highest total revenue last month was the <strong>West Coast</strong>, generating <strong>$1.24 Million</strong> in sales.
-                </p>
-                
-                <p className="mb-4 text-text-secondary font-medium text-sm">Revenue breakdown by region:</p>
-                
-                {/* Visual Chart Mockup */}
-                <div className="w-full bg-white border border-border rounded-xl p-5 shadow-sm mb-4">
-                    <div className="space-y-4">
-                        {/* Bar 1 */}
-                        <div className="flex flex-col gap-1.5">
-                            <div className="flex justify-between text-sm">
-                                <span className="font-medium text-text-primary">West Coast</span>
-                                <span className="font-semibold text-primary">$1.24M</span>
-                            </div>
-                            <div className="w-full h-2.5 bg-surface-hover rounded-full overflow-hidden">
-                                <motion.div initial={{width:0}} animate={{width:'100%'}} transition={{duration:0.8, delay:0.4}} className="h-full bg-primary rounded-full"></motion.div>
-                            </div>
-                        </div>
-                        
-                        {/* Bar 2 */}
-                        <div className="flex flex-col gap-1.5">
-                            <div className="flex justify-between text-sm">
-                                <span className="font-medium text-text-secondary">East Coast</span>
-                                <span className="font-semibold text-text-primary">$0.98M</span>
-                            </div>
-                            <div className="w-full h-2.5 bg-surface-hover rounded-full overflow-hidden">
-                                <motion.div initial={{width:0}} animate={{width:'79%'}} transition={{duration:0.8, delay:0.6}} className="h-full bg-text-tertiary rounded-full"></motion.div>
-                            </div>
-                        </div>
-                        
-                        {/* Bar 3 */}
-                        <div className="flex flex-col gap-1.5">
-                            <div className="flex justify-between text-sm">
-                                <span className="font-medium text-text-secondary">Midwest</span>
-                                <span className="font-semibold text-text-primary">$0.65M</span>
-                            </div>
-                            <div className="w-full h-2.5 bg-surface-hover rounded-full overflow-hidden">
-                                <motion.div initial={{width:0}} animate={{width:'52%'}} transition={{duration:0.8, delay:0.8}} className="h-full bg-text-tertiary rounded-full"></motion.div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div className="bg-primary-light/40 border border-primary-light p-4 rounded-xl flex items-start gap-3">
-                    <Lightbulb size={18} className="text-primary mt-0.5 shrink-0" />
-                    <p className="text-sm text-text-primary leading-relaxed">
-                        The West Coast region saw a 14% increase compared to the previous month, driven primarily by enterprise software subscriptions.
-                    </p>
-                </div>
-            </>
-        )
-    }
-];
-
 export default function AgentConsolePage() {
-    const selectedDataset = usePlatformStore(state => state.selectedDataset);
-    
+    const selectedDataset = usePlatformStore(state => state.datasetName);
+
     const [messages, setMessages] = useState<Message[]>([]);
     const [inputValue, setInputValue] = useState('');
     const [isTyping, setIsTyping] = useState(false);
@@ -101,7 +33,11 @@ export default function AgentConsolePage() {
                 content: "Please upload and select a dataset in Datasets before starting a chat."
             }]);
         } else {
-            setMessages(defaultMockupMessages);
+            setMessages([{
+                id: 'ready',
+                role: 'agent',
+                content: `Ready to answer questions about ${selectedDataset}. Ask me anything about the pipeline results.`
+            }]);
         }
     }, [selectedDataset]);
 
@@ -167,8 +103,8 @@ export default function AgentConsolePage() {
                     </div>
                 </div>
                 <div className="flex gap-2">
-                    <button 
-                        onClick={() => setMessages(!selectedDataset ? [{ id: 'no-dataset', role: 'agent', content: "Please upload and select a dataset in Datasets before starting a chat." }] : defaultMockupMessages)}
+                    <button
+                        onClick={() => setMessages(!selectedDataset ? [{ id: 'no-dataset', role: 'agent', content: "Please upload and select a dataset in Datasets before starting a chat." }] : [{ id: 'ready', role: 'agent', content: `Ready to answer questions about ${selectedDataset}. Ask me anything about the pipeline results.` }])}
                         className="px-3 py-1.5 rounded-lg border border-border text-sm font-medium text-text-secondary hover:bg-surface-hover hover:text-text-primary transition-colors flex items-center gap-2 bg-white"
                     >
                         <Trash2 size={14} /> Clear

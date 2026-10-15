@@ -86,6 +86,7 @@ export default function ReportsPage() {
   }
 
   const models = automlData?.leaderboard?.slice(0, 3) || [];
+  const isRegression = automlData?.problem_type === 'regression';
   const insights = insightsData?.insights || [];
   const recommendations = recommendationsData?.actions || [];
 
@@ -159,9 +160,11 @@ export default function ReportsPage() {
                     </div>
                     <div className="flex items-end gap-3">
                       <p className="text-3xl font-bold text-text-primary">
-                        {(model.r2_score !== undefined ? model.r2_score.toFixed(3) : model.cv_mean?.toFixed(3) || 'N/A')}
+                        {typeof model.score === 'number' ? model.score.toFixed(3) : 'N/A'}
                       </p>
-                      <span className={`text-sm font-bold ${color.text} mb-1`}>Score</span>
+                      <span className={`text-sm font-bold ${color.text} mb-1`}>
+                        {isRegression ? 'R²' : 'Accuracy'}
+                      </span>
                     </div>
                   </div>
                 );
@@ -205,8 +208,7 @@ export default function ReportsPage() {
                       cursor={{fill: '#F3F4F6'}}
                     />
                     <Legend iconType="circle" wrapperStyle={{ fontSize: '12px', paddingTop: '20px' }}/>
-                    <Bar dataKey="r2_score" name="R2 Score" fill="#0EA5E9" radius={[6, 6, 0, 0]} maxBarSize={60} />
-                    <Bar dataKey="cv_mean" name="Cross-Validation Mean" fill="#8B5CF6" radius={[6, 6, 0, 0]} maxBarSize={60} />
+                    <Bar dataKey="score" name="Score (Accuracy / R²)" fill="#0EA5E9" radius={[6, 6, 0, 0]} maxBarSize={60} />
                   </BarChart>
                 </ResponsiveContainer>
               </div>

@@ -10,7 +10,17 @@ from core.models.models import User
 from core.context import current_user_id
 import os
 
-SECRET_KEY = os.getenv("JWT_SECRET_KEY", "super-secret-agentix-key-2026")
+# Fail-closed by default: the dev-only bypass/secret below only ever apply when
+# ENVIRONMENT is explicitly "development" (unset also counts as development, for
+# local convenience) — anything else (production, staging, or a misconfigured/
+# unrecognized value) requires a real JWT_SECRET_KEY and a real bearer token.
+ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
+
+SECRET_KEY = os.getenv("JWT_SECRET_KEY")
+if not SECRET_KEY:
+    if ENVIRONMENT != "development":
+        raise RuntimeError("JWT_SECRET_KEY must be set when ENVIRONMENT is not 'development'")
+    SECRET_KEY = "super-secret-agentix-key-2026"  # dev-only fallback, never used outside development
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # 7 days
 
@@ -35,13 +45,13 @@ def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
 
 def get_current_user(token: Optional[str] = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     if not token:
-        if os.getenv("ENVIRONMENT") == "production":
+        if ENVIRONMENT != "development":
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Not authenticated",
                 headers={"WWW-Authenticate": "Bearer"},
             )
-        # Development fallback
+        # Development-only fallback (ENVIRONMENT == "development")
         user = db.query(User).filter(User.email == "admin@agentix.com").first()
         if not user:
             user = User(

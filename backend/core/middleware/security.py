@@ -1,33 +1,46 @@
-import time
-import os
-from fastapi import Request
-from starlette.middleware.base import BaseHTTPMiddleware
-from starlette.responses import JSONResponse
-import jwt
-from core.config import settings
+import json
 
-class SecurityMiddleware(BaseHTTPMiddleware):
+SECURITY_HEADERS = [
+    (b"x-content-type-options", b"nosniff"),
+    (b"x-frame-options", b"DENY"),
+    (b"x-xss-protection", b"1; mode=block"),
+    (b"strict-transport-security", b"max-age=31536000; includeSubDomains"),
+    (b"content-security-policy", b"default-src 'self'"),
+]
+
+
+class SecurityMiddleware:
+    """Pure ASGI middleware (not BaseHTTPMiddleware) to avoid the documented
+    Starlette hang that occurs when multiple BaseHTTPMiddleware subclasses are
+    stacked on the same app — see core/middleware/profiling.py for the same fix."""
+
     def __init__(self, app, rate_limit: int = 100):
-        super().__init__(app)
+        self.app = app
         self.rate_limit = rate_limit
-        
-    async def dispatch(self, request: Request, call_next):
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
         # 1. Request Size Limits (100 MB max for file uploads)
-        content_length = request.headers.get("content-length")
+        headers = dict(scope.get("headers") or [])
+        content_length = headers.get(b"content-length")
         if content_length and int(content_length) > 100 * 1024 * 1024:
-            return JSONResponse(status_code=413, content={"detail": "Payload Too Large"})
+            body = json.dumps({"detail": "Payload Too Large"}).encode()
+            await send({
+                "type": "http.response.start",
+                "status": 413,
+                "headers": [(b"content-type", b"application/json")],
+            })
+            await send({"type": "http.response.body", "body": body})
+            return
 
         # 2. Rate Limiting (Temporarily disabled due to redis removal)
-        # client_ip = request.client.host
-        # path = request.url.path
 
-        # 3. Security Headers (Helmet Equivalent)
-        response = await call_next(request)
-        
-        response.headers["X-Content-Type-Options"] = "nosniff"
-        response.headers["X-Frame-Options"] = "DENY"
-        response.headers["X-XSS-Protection"] = "1; mode=block"
-        response.headers["Strict-Transport-Security"] = "max-age=31536000; includeSubDomains"
-        response.headers["Content-Security-Policy"] = "default-src 'self'"
-        
-        return response
+        async def send_with_security_headers(message):
+            if message["type"] == "http.response.start":
+                message["headers"] = list(message.get("headers", [])) + SECURITY_HEADERS
+            await send(message)
+
+        await self.app(scope, receive, send_with_security_headers)

@@ -139,24 +139,31 @@ export default function SettingsPage() {
                   </div>
                   
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {['OpenAI (GPT-4o)', 'Anthropic (Claude 3.5)', 'Google Gemini (1.5 Pro)', 'Local (Llama 3)'].map((model) => (
-                      <div 
-                        key={model} 
-                        onClick={() => handleChange('llmProvider', model)}
-                        className={`p-4 border rounded-xl cursor-pointer transition-all ${settings.llmProvider === model ? 'border-primary bg-primary-light/20 ring-1 ring-primary/20' : 'border-border hover:border-primary-light hover:bg-surface'}`}
+                    {[
+                      { name: 'Local (Ollama)', connected: true, note: 'Actually used by the AI Assistant today — whichever model is running locally via Ollama.' },
+                      { name: 'OpenAI (GPT-4o)', connected: false, note: 'Not connected. No backend integration exists yet.' },
+                      { name: 'Anthropic (Claude 3.5)', connected: false, note: 'Not connected. No backend integration exists yet.' },
+                      { name: 'Google Gemini (1.5 Pro)', connected: false, note: 'Not connected. No backend integration exists yet.' },
+                    ].map(({ name: model, connected, note }) => (
+                      <div
+                        key={model}
+                        onClick={() => connected && handleChange('llmProvider', model)}
+                        className={`p-4 border rounded-xl transition-all ${connected ? 'cursor-pointer' : 'cursor-not-allowed opacity-60'} ${settings.llmProvider === model ? 'border-primary bg-primary-light/20 ring-1 ring-primary/20' : 'border-border hover:border-primary-light hover:bg-surface'}`}
                       >
                         <div className="flex items-center justify-between mb-2">
                           <span className="font-bold text-text-primary">{model}</span>
-                          {settings.llmProvider === model && <span className="w-2.5 h-2.5 rounded-full bg-primary" />}
+                          {connected
+                            ? (settings.llmProvider === model && <span className="w-2.5 h-2.5 rounded-full bg-primary" />)
+                            : <span className="text-[10px] uppercase font-bold tracking-wide text-text-tertiary bg-surface-hover px-1.5 py-0.5 rounded">Not connected</span>}
                         </div>
-                        <p className="text-xs text-text-secondary">High intelligence, balanced speed.</p>
+                        <p className="text-xs text-text-secondary">{note}</p>
                       </div>
                     ))}
                   </div>
 
                   {isExecutive ? (
                     <div className="pt-6 border-t border-border">
-                      <p className="text-sm text-text-secondary">Your AI provider is already set up and billed through your organization — nothing to configure here.</p>
+                      <p className="text-sm text-text-secondary">The AI Assistant is powered by a local model running via Ollama on this machine — there is no cloud AI subscription to manage here.</p>
                     </div>
                   ) : (
                     <div className="pt-6 border-t border-border">

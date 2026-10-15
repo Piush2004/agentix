@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import axios from "axios";
 
-const BACKEND_URL = process.env.BACKEND_URL || "http://127.0.0.1:8000";
+// Was reading a nonexistent BACKEND_URL env var (always falling back to a
+// hardcoded :8000), while every other route in this app uses
+// NEXT_PUBLIC_API_URL (:8001 locally) - meant this call could never reach
+// the real backend regardless of what port it was actually running on.
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8001";
 
 export async function GET() {
   try {

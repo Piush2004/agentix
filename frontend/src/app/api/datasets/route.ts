@@ -1,14 +1,12 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getOrCreateDefaultUser } from "@/lib/user";
 
 export async function POST(req: Request) {
   const session = await auth();
-  let userId: string = (session?.user?.id as string) || "";
+  const userId = session?.user?.id as string | undefined;
   if (!userId) {
-    const defaultUser = await getOrCreateDefaultUser();
-    userId = (defaultUser?.id as string) || "default-user";
+    return NextResponse.json({ error: "Not authenticated" }, { status: 401 });
   }
 
   try {

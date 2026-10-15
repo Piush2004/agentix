@@ -1,26 +1,22 @@
 import { auth } from "@/auth";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { getOrCreateDefaultUser } from "@/lib/user";
+
+async function requireAdmin() {
+  const session = await auth();
+  if (!session?.user?.id) {
+    return { error: NextResponse.json({ error: "Not authenticated" }, { status: 401 }) };
+  }
+  // @ts-expect-error role is added to the session in auth.config.ts
+  if (session.user.role !== "ADMIN") {
+    return { error: NextResponse.json({ error: "Admin access required" }, { status: 403 }) };
+  }
+  return { userId: session.user.id as string };
+}
 
 export async function GET() {
-  const session = await auth();
-  let userId: string = (session?.user?.id as string) || "";
-  if (!userId) {
-    const defaultUser = await getOrCreateDefaultUser();
-    userId = (defaultUser?.id as string) || "default-user";
-  }
-
-  const currentUser = await prisma.user.findUnique({
-    where: { id: userId }
-  });
-
-  if (currentUser && currentUser.role !== "ADMIN") {
-    await prisma.user.update({
-      where: { id: userId },
-      data: { role: "ADMIN" }
-    });
-  }
+  const check = await requireAdmin();
+  if (check.error) return check.error;
 
   try {
     const users = await prisma.user.findMany({
@@ -66,12 +62,8 @@ export async function GET() {
 }
 
 export async function POST(req: Request) {
-  const session = await auth();
-  let userId: string = (session?.user?.id as string) || "";
-  if (!userId) {
-    const defaultUser = await getOrCreateDefaultUser();
-    userId = (defaultUser?.id as string) || "default-user";
-  }
+  const check = await requireAdmin();
+  if (check.error) return check.error;
 
   try {
     const { action, userId: targetUserId, role } = await req.json();

@@ -11,9 +11,21 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./agentix.db")
 
 # Connection Pooling & Configuration
 if DATABASE_URL.startswith("sqlite"):
+    # SQLAlchemy's default QueuePool (pool_size=5, max_overflow=10) is sized for a
+    # networked database where each connection is expensive; a SQLite connection is
+    # just a local file handle, cheap to hold one per in-flight request. With the
+    # default pool, as few as ~12 truly concurrent dataset uploads (each holding a
+    # connection through a multi-stage pipeline run) exhausted the pool and failed
+    # with "QueuePool limit of size 5 overflow 10 reached, connection timed out" -
+    # reproduced directly. WAL mode below already allows real concurrent SQLite
+    # access; raise the pool to actually take advantage of that instead of
+    # bottlenecking on an unrelated default.
     engine = create_engine(
-        DATABASE_URL, 
-        connect_args={"check_same_thread": False, "timeout": 15}
+        DATABASE_URL,
+        connect_args={"check_same_thread": False, "timeout": 15},
+        pool_size=30,
+        max_overflow=60,
+        pool_timeout=30,
     )
     # Enable WAL mode for concurrent writes
     from sqlalchemy import event
@@ -80,9 +92,50 @@ def ensure_guest_user():
     finally:
         db.close()
 
+def reap_stale_workflow_runs():
+    """
+    WorkflowRun/PipelineStage progress is only ever advanced by the process
+    that started it (FastAPI BackgroundTasks in this in-process orchestrator,
+    not a durable external worker). If that process is killed or restarted
+    while a run is mid-flight, the run's row is permanently left at status
+    "started"/"running" with no code path left to ever move it forward -
+    a real, previously-unresolved defect (confirmed via runtime inspection:
+    thousands of "started" rows with no dataset_id had accumulated in the
+    database from an unrelated bug, plus at least one genuine "running" row
+    stale since a prior backend restart).
+
+    On every fresh process start, nothing can possibly still be executing a
+    run that predates this process, so any run left at started/running is
+    unambiguously stale. Mark it (and any of its non-terminal stages) failed
+    with an honest, diagnosable reason instead of leaving it stuck forever
+    or silently deleting history.
+    """
+    from core.models.models import WorkflowRun, PipelineStage
+    db = SessionLocal()
+    try:
+        stale_runs = db.query(WorkflowRun).filter(WorkflowRun.status.in_(["started", "running"])).all()
+        if not stale_runs:
+            return
+        for run in stale_runs:
+            run.status = "failed"
+            reason = "Backend process restarted while this run was in progress; no worker remained to complete it."
+            run.logs = (run.logs + "\n" if run.logs else "") + f"[stale-run-reaper] {reason}"
+            for stage in run.stages:
+                if stage.status in ("pending", "running"):
+                    stage.status = "failed"
+                    stage.errors = stage.errors or (
+                        '{"root_cause": "StaleRunOnStartup", "message": "%s"}' % reason
+                    )
+        db.commit()
+        logger.warning(f"[stale-run-reaper] Marked {len(stale_runs)} orphaned workflow run(s) as failed on startup.")
+    finally:
+        db.close()
+
+
 def init_db():
     """Automatic Migration (Creates tables if they do not exist)"""
     if wait_for_db():
         Base.metadata.create_all(bind=engine)
         logger.info("Database schema initialized.")
         ensure_guest_user()
+        reap_stale_workflow_runs()

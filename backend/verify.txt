@@ -1,0 +1,51 @@
+=== SLIDE 1 ===
+  TXT:  | AGENTIX | An AI-Powered Data Intelligence PlatformPiush Kole (2548421)Thrilok M (2548430)Guided By - Dr. Deepa BG.
+=== SLIDE 2 ===
+  TXT: THE "DATA-TO-DECISION" GAP | MANUAL BOTTLENECK | Cleaning, feature engineering, and model selection  | consume days of expert time before insight appears. | TOOL FRAGMENTATION | Spreadsheets, notebooks, and BI tools each own one  | slice of the workflow, with no shared thread. | THE AGENTIX ANSWER | An orchestrated pipeline of real agents that profiles, cleans, trains, and explains a dataset - automatically. | "Most platforms show you dashboards about your data. Agentix builds and evaluates a model from it."
+  PIC: 6.12x3.93 at (6.91,1.79)
+=== SLIDE 3 ===
+  ROW: Approach / Pros / Cons / Suitability
+  ROW: Manual Data Science / Full control, deep insight / Slow, expertise-dependent / Low
+  ROW: BI Dashboards / Fast visualization / No modelling or automated cleaning / Low
+  ROW: Generic AutoML / Automated model search / Black-box, ignores data quality / Mid
+  ROW: Agentix Pipeline / Full automation, persisted state / Single model per run today / High
+  TXT: APPROACH COMPARATIVE ANALYSIS
+  TXT: PROPOSED SYSTEM: Persistent Pipeline Orchestrator
+  TXT: Nine independently-tracked agents turn a black-box script into an auditable, resumable workflow.
+=== SLIDE 4 ===
+  TXT: METHODOLOGY: THE AGENTIC PIPELINE
+  TXT: ORCHESTRATION-AS-INTELLIGENCE
+  TXT: Agentix decomposes data science into 9 independently-tracked agents, each persisting its real status and output to a database.
+  TXT: A failed stage surfaces its real root cause - never a generic error message.
+  TXT: Every accuracy, R², and feature-importance value shown is computed on real held-out data — never fabricated.
+=== SLIDE 5 ===
+  TXT: 1. Profiling & Cleaning: Real per-column statistics (skew, type) decide the imputation strategy — median, mean, or mode.
+  TXT: 2. Feature Engineering & Training: Cardinality-aware encoding feeds a scikit-learn SGD model trained on a real train/test split.
+  TXT: 3. Evaluation & Insight: Held-out accuracy and feature importance are persisted, then explained by a local LLM grounded only in that output.
+=== SLIDE 6 ===
+  TXT: ‹#›
+  PIC: 11.02x6.71 at (1.03,0.30)
+=== SLIDE 7 ===
+  PIC: 13.27x6.69 at (0.00,0.32)
+=== SLIDE 8 ===
+  TXT: ‹#›
+  TXT: PHASE 1
+  TXT: Backend deadlock fixed; dataset upload golden path restored end-to-end.
+  TXT: NOW (STABILIZATION)
+  TXT: Dashboard fabrications removed; classification bug fixed; test suite & build restored.
+  TXT: NEXT
+  TXT: Multi-model AutoML search, class-imbalance handling, temporal feature engineering.
+  TXT: FINAL STAGE
+  TXT: Durable task queue, cloud deployment, and production observability.
+  TXT: CURRENT STATUS & FUTURE ROADMAP
+=== SLIDE 9 ===
+  TXT: ‹#›
+  TXT: Manual Data Work → Slow Decisions: without automation, cleaning and modelling consume most of a data project's time before insight appears. |  | Fragmented Tooling → Lost Context: spreadsheets, notebooks, and BI tools each capture one slice of the workflow, with no shared record between them. |  | Orchestrated Agents → Auditable Pipelines: Agentix tracks every stage's real status and output in a database, surviving refreshes and restarts. |  | Honest-by-Design → Trustworthy Automation: empty and error states say plainly what hasn't happened yet, instead of fabricating a metric. |  | Future Direction: multi-model comparison, drift monitoring, and stronger explainability are the next steps toward production readiness.
+  TXT: Summary and Future Aspects:- 
+=== SLIDE 10 ===
+  TXT: ‹#›
+  TXT: Auto-WEKA: Combined Selection and Hyperparameter Optimization of Classification Algorithms — Thornton, C. et al. (2013) | Efficient and Robust Automated Machine Learning — Feurer, M. et al. (2015) | Why Should I Trust You? Explaining the Predictions of Any Classifier — Ribeiro, M. et al. (2016) | A Unified Approach to Interpreting Model Predictions — Lundberg, S. & Lee, S. (2017) | Statistical Analysis with Missing Data — Little, R. & Rubin, D. (2002) | 
+  TXT: Reference :- 
+=== SLIDE 11 ===
+  TXT: ‹#›
+  TXT: Thank you for your attention.

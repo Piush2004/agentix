@@ -113,7 +113,11 @@ export default function DatasetsPage() {
         setPhase('processing');
         startPolling(result.job_id);
       } else {
-        setUploadError('Upload failed. Please try again.');
+        // uploadDataset() already computed the real backend-provided cause
+        // (e.g. "File is empty.", "Malformed CSV format detected.") and put
+        // it in the store's `error` field before returning null - show that
+        // instead of a generic message that discards it.
+        setUploadError(usePlatformStore.getState().error || 'Upload failed. Please try again.');
         setPhase('error');
       }
     } catch (err: any) {

@@ -3,18 +3,28 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import { useSession } from 'next-auth/react';
+import {
   ArrowLeft,
   BrainCircuit,
   Wand2,
   Settings,
   Hexagon,
   Menu,
-  X
+  X,
+  AlertTriangle
 } from 'lucide-react';
+
+function initialsFrom(name?: string | null, email?: string | null): string {
+  const source = name?.trim() || email?.trim() || '';
+  if (!source) return '?';
+  const parts = source.includes('@') ? [source.split('@')[0]] : source.split(/\s+/);
+  return parts.slice(0, 2).map(p => p[0]?.toUpperCase() || '').join('') || '?';
+}
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const [isSidebarOpen, setSidebarOpen] = useState(false);
 
   const navItems = [
@@ -96,7 +106,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           
           <div className="flex items-center gap-3">
             <Link href="/profile" className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 text-white flex items-center justify-center font-medium text-xs shadow-sm ring-2 ring-white ml-2 overflow-hidden hover:scale-105 transition-transform">
-              SJ
+              {initialsFrom(session?.user?.name, session?.user?.email)}
             </Link>
           </div>
         </header>
@@ -104,6 +114,19 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         {/* Page Content */}
         <main className="flex-1 overflow-y-auto">
           <div className="container mx-auto p-4 sm:p-6 md:p-8">
+            {/* These "Pro" pages are UI previews for planned admin tooling
+                (LLM/model/prompt/workflow management, DB inspection) that has
+                no real backend behind it yet - the widgets on them show
+                illustrative numbers, not live Agentix state. Labeling this
+                honestly here, rather than presenting it as production data,
+                is a deliberate scope decision until each page is wired up. */}
+            <div className="mb-6 flex items-start gap-3 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-amber-800">
+              <AlertTriangle size={18} className="shrink-0 mt-0.5" />
+              <p className="text-sm font-medium">
+                Preview feature: pages under Agentix Pro are UI mockups for planned admin tooling.
+                They are not yet connected to live backend data — numbers shown here are illustrative only.
+              </p>
+            </div>
             <AnimatePresence mode="wait">
               <motion.div
                 key={pathname}
