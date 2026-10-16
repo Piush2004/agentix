@@ -37,7 +37,18 @@ class Dataset(Base):
     columns = Column(Integer, default=0)
     size_bytes = Column(Integer, default=0)
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
+    # Pipeline intermediate state, persisted here so it survives a backend
+    # restart. Previously held only in an in-process dict (DataService),
+    # which meant an on-demand recomputation (e.g. /profile) for an already
+    # fully-processed dataset would fail with a 400 after any restart, even
+    # though the pipeline was marked completed in the database.
+    parquet_path = Column(String, nullable=True)
+    target_column = Column(String, nullable=True)
+    problem_type = Column(String, nullable=True)
+    y_test_json = Column(Text, nullable=True)
+    y_pred_json = Column(Text, nullable=True)
+
     owner = relationship("User", back_populates="datasets")
 
 class WorkflowRun(Base):

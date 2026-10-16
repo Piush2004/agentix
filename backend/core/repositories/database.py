@@ -132,10 +132,46 @@ def reap_stale_workflow_runs():
         db.close()
 
 
+def _migrate_add_missing_columns():
+    """
+    Base.metadata.create_all() only creates tables that don't exist yet - it
+    never alters an existing table to add a column a model gained later, so
+    a column added to a model (e.g. Dataset.parquet_path) would silently be
+    missing from an already-initialized database, causing a confusing
+    "no such column" error the first time it's read rather than at startup.
+    Compares each mapped table's columns against what's actually in the
+    database and adds any that are missing, which is safe because every
+    column added this way is nullable (ADD COLUMN with no default backfills
+    existing rows as NULL in both SQLite and Postgres).
+    """
+    from sqlalchemy import inspect, text
+
+    inspector = inspect(engine)
+    existing_tables = set(inspector.get_table_names())
+    for table in Base.metadata.sorted_tables:
+        if table.name not in existing_tables:
+            continue
+        existing_columns = {col["name"] for col in inspector.get_columns(table.name)}
+        for column in table.columns:
+            if column.name in existing_columns:
+                continue
+            if not column.nullable:
+                logger.warning(
+                    f"[migrate] Skipping non-nullable column {table.name}.{column.name} - "
+                    "add it with a server_default or a real migration, not auto-ALTER."
+                )
+                continue
+            col_type = column.type.compile(engine.dialect)
+            with engine.begin() as conn:
+                conn.execute(text(f"ALTER TABLE {table.name} ADD COLUMN {column.name} {col_type}"))
+            logger.info(f"[migrate] Added missing column {table.name}.{column.name} ({col_type})")
+
+
 def init_db():
     """Automatic Migration (Creates tables if they do not exist)"""
     if wait_for_db():
         Base.metadata.create_all(bind=engine)
+        _migrate_add_missing_columns()
         logger.info("Database schema initialized.")
         ensure_guest_user()
         reap_stale_workflow_runs()
