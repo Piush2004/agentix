@@ -2,12 +2,13 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// SQLite for local dev: matches what's actually running today (see backend's
-// own agentix.db) and needs no external Postgres server to be provisioned.
-// A real Postgres migration for both frontend and backend is tracked as
-// future work, not silently deferred.
+// Postgres, not SQLite: this app is now deployed to Vercel, whose serverless
+// functions have an ephemeral/read-only filesystem - a SQLite file written
+// during one invocation is not guaranteed to exist for the next one, so
+// local dev and production both point at the same real Postgres instance
+// (a free Neon database) rather than maintaining two different providers.
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 

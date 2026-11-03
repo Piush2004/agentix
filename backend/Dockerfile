@@ -21,4 +21,4 @@ EXPOSE 8000
 # Shell form (not exec-form JSON array) so $PORT expands - Railway/Render
 # assign the listen port dynamically via this env var at container start,
 # and a hardcoded --port 8000 would ignore it and fail their health check.
-CMD uvicorn core.api.main:app --host 0.0.0.0 --port ${PORT:-8000}\n
+CMD uvicorn core.api.main:app --host 0.0.0.0 --port ${PORT:-8000}
