@@ -1,2 +1,0 @@
-This is a plain text file. It is not a valid dataset format like CSV or Excel or JSON.
-Upload should reject this file.
